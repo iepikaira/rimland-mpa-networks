@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>CONTINENTAL ARCHITECTURE — Four Seas × IMEC × Three Seas</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eee9df; --panel:rgba(246,242,234,.97); --panel2:rgba(248,245,239,.99);
+  --ink:#26231f; --dim:#5f5a52; --faint:#8b847a;
+  --amber:#9a6a2f; --cyan:#55707a; --emerald:#5d775e; --violet:#756b7f; --red:#9b5b50;
+  --line:rgba(70,63,53,.18);
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --sans:Georgia,'Times New Roman',serif;
+  --narr-size:13px;
+  --sab:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);overflow-x:hidden}
+button{touch-action:manipulation}
+#map{position:fixed;inset:0;background:#eee9df;z-index:1}
+.leaflet-container{font-family:var(--mono)}
+.leaflet-control-attribution{background:rgba(238,233,223,.77)!important;color:#756e63!important;font:9px var(--mono)!important}
+.leaflet-control-attribution a{color:#756e63!important}
+.leaflet-bar a{background:#e4ded3!important;color:#5d574e!important;border-color:rgba(70,63,53,.16)!important}
+.glow-pipeline{transition:filter .3s,stroke-width .3s;cursor:pointer}
+
+header{position:fixed;top:0;left:0;right:0;z-index:1200;display:flex;align-items:center;gap:12px;
+  padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0px));
+  border-bottom:1px solid var(--line);backdrop-filter:blur(8px);/*background:rgba(238,233,223,.95)*/}
+.brand{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.brand .eyebrow{font:10px var(--mono);letter-spacing:.22em;color:var(--faint);text-transform:uppercase;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand h1{font:900 15px/1.15 var(--sans);letter-spacing:.03em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand h1 b{color:var(--amber)} .brand h1 i{color:var(--cyan);font-style:normal} .brand h1 u{color:var(--violet);text-decoration:none}
+.hbtns{display:flex;gap:6px;align-items:center;flex:none}
+.btn{font:600 10.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--dim);
+  background:rgba(70,63,53,.055);border:1px solid var(--line);border-radius:4px;padding:9px 12px;cursor:pointer;
+  transition:.18s;white-space:nowrap;min-height:36px}
+.btn:hover{color:var(--ink);border-color:rgba(70,63,53,.34);background:rgba(70,63,53,.11)}
+.btn.primary{color:#0a0e17;background:var(--amber);border-color:var(--amber);font-weight:700}
+.btn.primary:hover{background:#ffb63e}
+
+/* Hide map controls during story phase */
+body.story-mode > .foot,
+body.story-mode #layers,
+body.story-mode #settings,
+body.story-mode #dossier,
+body.story-mode #narr{display:none !important}
+
+/* Hide ALL map UI when the outro/ending slide is on screen */
+body.ending-mode #narr,
+body.ending-mode > .foot,
+body.ending-mode #dossier,
+body.ending-mode .drawer,
+body.ending-mode #layers,
+body.ending-mode #settings{display:none !important}
+body.ending-mode header .hbtns{opacity:0;pointer-events:none}
+
+/* Header buttons appear only on the map slides */
+body.story-mode header .hbtns{display:none !important}
+
+/* ===== SCROLL STORY SECTIONS ===== */
+.story-section{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;
+  padding:80px 20px 40px;position:relative;z-index:10}
+.story-section::before{content:'';position:absolute;inset:0;
+  background:linear-gradient(to bottom,rgba(238,233,223,.94),rgba(238,233,223,.78),rgba(238,233,223,.94));pointer-events:none}
+.story-card{zoom: 1.12; position:relative;max-width:720px;width:100%;background:var(--panel2);
+  border:1px solid rgba(245,166,35,.35);border-radius:12px;padding:36px 32px;
+  box-shadow:0 20px 60px rgba(45,39,31,.18);opacity:0;transform:translateY(40px);
+  transition:opacity .9s ease,transform .9s cubic-bezier(.2,.7,.2,1)}
+.story-card.visible{opacity:1;transform:none}
+.story-kick{font:700 10px var(--mono);letter-spacing:.26em;color:var(--amber);text-transform:uppercase;margin-bottom:10px}
+.story-title{font:900 clamp(26px,4.6vw,40px)/1.06 var(--sans);text-transform:uppercase;margin-bottom:14px}
+.story-title b{color:var(--amber)} .story-title i{color:var(--cyan);font-style:normal} .story-title u{color:var(--violet);text-decoration:none}
+.story-body{font:400 15px/1.75 var(--sans);color:#45413a;margin-bottom:18px}
+.story-body em{color:var(--amber);font-style:normal;font-weight:600}
+.story-gloss{margin-top:14px;font:400 9.5px/1.6 var(--mono);color:var(--faint)}
+.story-gloss b{color:var(--dim)}
+.story-visual{margin-top:20px}
+.story-enter{text-align:center;margin-top:28px}
+.story-enter .btn{font-size:13px;padding:15px 28px}
+.story-progress{display:flex;gap:6px;margin-top:24px;justify-content:center}
+.story-progress i{flex:0 0 24px;height:4px;border-radius:2px;background:rgba(70,63,53,.12);transition:background .4s}
+.story-progress i.done{background:rgba(245,166,35,.4)}
+.story-progress i.cur{background:var(--amber)}
+
+/* Visual components */
+.briefFlow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:10px;align-items:center;margin-top:20px}
+.briefNode{min-height:80px;border:1px solid rgba(154,106,47,.32);background:rgba(154,106,47,.06);
+  border-radius:8px;padding:12px 10px;text-align:center;display:flex;align-items:center;justify-content:center;
+  font:800 10px/1.3 var(--mono);letter-spacing:.06em;text-transform:uppercase}
+.briefArrow{font:900 22px var(--sans);color:var(--amber);text-align:center}
+.briefGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
+.briefCard{border:1px solid var(--line);border-radius:8px;padding:14px;background:rgba(70,63,53,.025)}
+.briefCard h4{font:800 10px/1.2 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+.briefCard p{font:400 11.5px/1.55 var(--sans);color:#514c44}
+.briefMetric{font:900 22px/1 var(--sans);margin-bottom:6px;color:var(--amber)}
+.briefTrap{display:grid;grid-template-columns:1fr 1.1fr;gap:16px;align-items:stretch;margin-top:18px}
+.briefEquation{display:flex;align-items:center;justify-content:center;min-height:160px;
+  border:1px solid rgba(155,91,80,.34);background:rgba(155,91,80,.055);border-radius:8px;
+  padding:16px;font:800 12px/1.6 var(--mono);text-align:center;color:#625049}
+.briefEquation b{color:var(--red)}
+.briefEquationImg{min-height:160px;border:1px solid rgba(155,91,80,.34);background:rgba(155,91,80,.055);
+  border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin:0}
+.briefEquationImg img{width:100%;height:100%;object-fit:cover;display:block}
+.briefMesh{position:relative;min-height:160px;border:1px solid rgba(85,112,122,.3);
+  background:rgba(85,112,122,.05);border-radius:8px;overflow:hidden;margin-top:16px}
+.briefMesh::before,.briefMesh::after{content:'';position:absolute;left:14%;right:14%;top:50%;
+  height:1px;background:rgba(85,112,122,.35);box-shadow:0 -34px 0 rgba(85,112,122,.22),0 34px 0 rgba(85,112,122,.22);
+  transform:rotate(17deg)}
+.briefMesh::after{transform:rotate(-17deg)}
+.briefDot{position:absolute;width:13px;height:13px;border-radius:50%;background:var(--cyan);
+  box-shadow:0 0 0 5px rgba(85,112,122,.1)}
+.bd1{left:15%;top:21%}.bd2{left:47%;top:50%}.bd3{right:15%;top:21%}.bd4{left:15%;bottom:21%}.bd5{right:15%;bottom:21%}
+.briefMeshLabel{position:absolute;left:0;right:0;bottom:10px;text-align:center;
+  font:700 8px var(--mono);letter-spacing:.12em;color:var(--cyan);text-transform:uppercase}
+.briefMapLegend{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:18px}
+.briefLegendItem{border:1px solid var(--line);border-radius:7px;padding:11px 10px;background:rgba(70,63,53,.025)}
+.briefLegendItem b{display:block;font:800 9px var(--mono);letter-spacing:.09em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:5px}
+.briefLegendItem span{font:400 10.5px/1.45 var(--sans);color:#514c44}
+
+@media(max-width:780px){
+  .briefGrid,.briefTrap{grid-template-columns:1fr}
+  .briefFlow{grid-template-columns:1fr;gap:7px}
+  .briefArrow{transform:rotate(90deg)}
+  .briefMapLegend{grid-template-columns:1fr 1fr}
+  .story-card{padding:26px 20px}
+  .story-section{padding:72px 16px 32px}
+}
+
+/* ===== MAP INTERACTIVE SECTION ===== */
+#mapSection{position:relative;z-index:5;min-height:100vh;min-height:100dvh;padding-top:80px;pointer-events:none}
+
+#narr { zoom: 0.80; position: fixed !important; bottom: 4px !important; top: auto !important; left: 4px !important; right: 340px !important; width: auto !important; max-height: 49vh !important; transform: none !important; z-index: 900 !important; box-shadow: 0 4px 15px rgba(0,0,0,0.12) !important; border-radius: 8px !important; overflow-y: auto !important; background: rgba(249, 247, 242, 0.65) !important; pointer-events: auto; }
+#grab{display:none}
+#narr .head{padding:13px 16px 9px;border-bottom:1px solid var(--line);background:rgba(80,91,89,.035)}
+#stepKick{font:700 9.5px var(--mono);letter-spacing:.28em;color:var(--cyan);text-transform:uppercase}
+#stepTitle{font:900 20px/1.1 var(--sans);letter-spacing:.01em;margin-top:4px;text-transform:uppercase}
+#narr .body{zoom:1.33;padding:12px 16px 6px;overflow-y:auto;flex:1}
+#stepBody{font:400 var(--narr-size)/1.62 var(--sans);color:#45413a}
+#stepBody em{color:var(--amber);font-style:normal;font-weight:600}
+#badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
+.badge{font:700 9px var(--mono);letter-spacing:.12em;padding:4px 8px;border-radius:3px;border:1px solid}
+.b-green{color:var(--emerald);border-color:rgba(93,119,94,.38);background:rgba(46,204,113,.08)}
+.b-amber{color:var(--amber);border-color:rgba(154,106,47,.38);background:rgba(245,166,35,.08)}
+.b-cyan{color:var(--cyan);border-color:rgba(85,112,122,.38);background:rgba(74,163,232,.08)}
+.b-red{color:var(--red);border-color:rgba(155,91,80,.38);background:rgba(231,76,60,.08)}
+.b-violet{color:var(--violet);border-color:rgba(117,107,127,.38);background:rgba(123,104,238,.08)}
+#timeline{display:none;margin-top:11px;border-top:1px dashed var(--line);padding-top:9px}
+#timeline .tl{display:flex;gap:10px;align-items:baseline;padding:4px 0}
+#timeline .tl b{font:700 10px var(--mono);color:var(--amber);letter-spacing:.1em;min-width:84px;flex:none}
+#timeline .tl span{font:400 11.5px var(--sans);color:var(--dim)}
+.foot{padding:10px 16px 12px;border-top:1px solid var(--line)}
+#dots{display:flex;gap:6px;margin-bottom:9px}
+#dots i{flex:1;height:5px;border-radius:2px;background:rgba(70,63,53,.11);cursor:pointer;transition:.2s}
+#dots i.done{background:rgba(245,166,35,.35)}
+#dots i.cur{background:var(--amber);box-shadow:0 0 8px rgba(245,166,35,.6)}
+.navrow{display:flex;gap:8px}
+.navrow .btn{flex:1;text-align:center}
+#evNote{margin-top:8px;font:400 9.5px/1.5 var(--mono);color:var(--faint)}
+#evNote b{color:var(--dim)}
+
+/* PC Mode: Position .foot top-right exactly where #status used to be */
+@media (min-width: 961px) {
+  body > .foot {
+    zoom: 0.77;
+    position: fixed !important;
+    top: 90px !important;
+    right: 12px !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: 320px !important;
+    background: var(--panel2) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.12) !important;
+    padding: 16px !important;
+    z-index: 1000 !important;
+    margin: 0 !important;
+    border-top: none !important;
+  }
+}
+
+.drawer{zoom:0.70;position:fixed;z-index:1100;bottom:calc(20px + env(safe-area-inset-top,0px));right:16px;
+  width:304px;max-height:400px;background:rgba(249,247,242,0.70);border:1px solid var(--line);
+  border-radius:8px;overflow-y:auto;box-shadow:0 12px 40px rgba(45,39,31,.18);
+  transition:transform .28s,opacity .28s}
+.drawer.hiddenR{transform:translateX(24px);opacity:0;pointer-events:none}
+.drawer h3{font:700 9px var(--mono);letter-spacing:.24em;color:var(--faint);text-transform:uppercase;
+  padding:11px 14px 6px;position:sticky;top:0;background:var(--panel2)}
+.lrow{display:flex;align-items:center;gap:8px;padding:6px 14px;cursor:pointer;border-left:2px solid transparent}
+.lrow:hover{background:rgba(148,180,220,.06);border-left-color:var(--c,var(--cyan))}
+.lrow .sw{width:16px;height:4px;border-radius:2px;flex:none;background:var(--c)}
+.lrow .sw.dash{background:repeating-linear-gradient(90deg,var(--c) 0 4px,transparent 4px 8px)}
+.lrow .sw.poly{width:13px;height:13px;border-radius:3px;background:rgba(106,174,214,.2);border:1px solid #6BAED6}
+.lrow .sw.poly.assoc{background:rgba(158,154,200,.2);border-color:#9E9AC8}
+.lrow span{font:500 10.5px var(--mono);color:#4f4a43;flex:1;line-height:1.3}
+.lrow .st{font:700 8px var(--mono);letter-spacing:.06em;flex:none}
+.st-est{color:var(--emerald)} .st-pro{color:var(--amber)} .st-ctr{color:var(--red)} .st-op{color:var(--cyan)}
+.lrow input{accent-color:var(--amber);flex:none;cursor:pointer;width:16px;height:16px}
+.lnote{font:400 9px/1.5 var(--mono);color:var(--faint);padding:2px 14px 10px}
+.setgroup{padding:8px 14px 12px}
+.setgroup label.t{display:block;font:700 9px var(--mono);letter-spacing:.2em;color:var(--dim);
+  text-transform:uppercase;margin:8px 0 7px}
+.seg{display:flex;gap:5px}
+.seg button{flex:1;font:600 10px var(--mono);letter-spacing:.08em;color:var(--dim);
+  background:rgba(148,180,220,.05);border:1px solid var(--line);border-radius:4px;
+  padding:9px 4px;cursor:pointer;min-height:36px}
+.seg button.on{color:#0a0e17;background:var(--cyan);border-color:var(--cyan);font-weight:700}
+.setnote{font:400 9px/1.5 var(--mono);color:var(--faint);padding:0 14px 12px}
+
+#dossier{position:fixed;z-index:1150;top:calc(66px + env(safe-area-inset-top,0px));right:16px;
+  width:320px;background:var(--panel2);border:1px solid rgba(245,166,35,.4);border-radius:8px;
+  padding:16px;display:none;box-shadow:0 16px 50px rgba(45,39,31,.20);
+  max-height:calc(100% - 176px);overflow-y:auto}
+#dossier.show{display:block}
+#dossier .dt{font:700 9px var(--mono);letter-spacing:.24em;color:var(--amber);text-transform:uppercase}
+#dossier h2{font:900 19px var(--sans);margin:5px 0 2px;text-transform:uppercase}
+#dossier .dstat{margin:7px 0 9px}
+#dossier p{font:400 12px/1.6 var(--sans);color:#45413a}
+#dossier .links{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+#dossier .lk{font:600 8.5px var(--mono);letter-spacing:.06em;color:var(--cyan);
+  border:1px solid rgba(74,163,232,.35);border-radius:3px;padding:4px 8px;cursor:pointer}
+#dClose{position:absolute;top:8px;right:10px;background:none;border:none;color:var(--faint);
+  font:400 16px var(--mono);cursor:pointer;padding:6px}
+
+#layers{position:fixed !important;right:0 !important;bottom:0 !important;z-index:1001 !important}
+
+.nd{width:6px;height:6px;border-radius:50%;background:#fff;border:1.5px solid #5b554d}
+.nd.vc{background:#2e7d32;border-color:#2e7d32}
+.nd.keystone{width:10px;height:10px;border-width:2px;border-color:var(--amber);background:#f3eadb;
+  box-shadow:0 0 10px rgba(245,166,35,.7);border-radius:2px;transform:rotate(45deg)}
+.nd.valve{border-radius:2px;transform:rotate(45deg)}
+.nd.choke{width:9px;height:8px;border:none;background:var(--red);
+  clip-path:polygon(50% 0,100% 100%,0 100%);border-radius:0}
+.nd.contested{border-color:var(--red);box-shadow:0 0 6px rgba(231,76,60,.5);animation:ndb 1.6s infinite}
+@keyframes ndb{50%{box-shadow:0 0 18px rgba(231,76,60,.95)}}
+.sring{width:40px;height:40px;border:2px solid var(--amber);border-radius:50%;animation:sring 2.2s ease-out infinite}
+.sring.v{border-color:var(--violet);animation-delay:.6s}
+@keyframes sring{0%{transform:scale(.25);opacity:1}100%{transform:scale(1.5);opacity:0}}
+.leaflet-tooltip.tt{background:rgba(248,245,239,.98);border:1px solid var(--line);border-radius:4px;
+  color:var(--ink);font:600 10.5px var(--mono);letter-spacing:.05em;padding:4px 8px;
+  box-shadow:0 4px 14px rgba(45,39,31,.18)}
+.leaflet-tooltip.tt::before{display:none}
+body.reduced .sring,body.reduced .nd.contested{animation:none!important}
+.leaflet-tooltip{background:rgba(248,245,239,.98)!important;border:1px solid var(--line)!important;
+  border-radius:4px!important;color:var(--ink)!important;font:600 10.5px var(--mono)!important;
+  padding:4px 8px!important;box-shadow:0 4px 14px rgba(45,39,31,.18)!important}
+.leaflet-tooltip::before{display:none!important}
+
+@media (max-width:960px){
+  header{padding:7px 8px;padding-top:calc(7px + env(safe-area-inset-top,0px));gap:6px}
+  .brand h1{font-size:11px}
+  .brand .eyebrow{font-size:8px;letter-spacing:.14em}
+  .btn{padding:8px 9px;font-size:9px;min-height:38px}
+  #narr{top:auto;left:8px;right:8px;width:auto;bottom:calc(8px + var(--sab));max-height:52dvh;
+    transition:max-height .3s ease}
+  #grab{display:flex;align-items:center;justify-content:center;padding:7px 0 3px;cursor:pointer;flex:none}
+  #grab::before{content:'';width:44px;height:4px;border-radius:2px;background:rgba(70,63,53,.3)}
+  #narr.collapsed{max-height:112px}
+  #narr.collapsed .body{display:none}
+  #narr.collapsed .foot{display:none}
+  #narr .head{zoom: 1.3 !important;padding: 6px 12px 7px; background: transparent; border-bottom: 0;}
+  #stepTitle{font-size:16px}
+    .drawer{top:auto;bottom:0;right:0;left:auto;width:min(320px,88vw);max-height:78dvh;
+    border-radius:12px 0 0 12px;transform:translateX(105%);opacity:1;padding-bottom:var(--sab)}
+  .drawer.hiddenR{transform:translateX(105%)}
+  .drawer.showM{transform:translateX(0)!important;opacity:1;pointer-events:auto}
+  #layers{top:calc(56px + env(safe-area-inset-top,0px));bottom:auto;right:8px;
+    width:min(300px,92vw);max-height:56dvh;border-radius:12px;
+    box-shadow:0 12px 35px rgba(45,39,31,.2)}
+  #dossier{top:auto;bottom:calc(8px + var(--sab));left:8px;right:8px;width:auto;max-height:60dvh;overflow-y:auto}
+  #evNote{display:none}
+}
+@media (max-width:400px){
+  .brand .eyebrow{display:none}
+  #btnLayers,#btnSettings{font-size:0;padding:8px}
+  #btnLayers::before{content:'☰';font-size:13px}
+  #btnSettings::before{content:'⚙';font-size:13px}
+}
+@media (max-width:960px){
+  header{border-bottom-color:rgba(70,63,53,.14)}
+  .brand .eyebrow{display:none}
+  .brand h1{font-size:10px;letter-spacing:.015em}
+  .hbtns .btn{background:rgba(70,63,53,.045);border-color:rgba(70,63,53,.14);color:#5f5a52}
+  .hbtns .btn.primary{background:#9a6a2f;color:#f8f5ef;border-color:#9a6a2f}
+  #narr{max-height:46dvh;background:rgba(246,242,234,.96);border-color:rgba(70,63,53,.16);
+    box-shadow:0 8px 28px rgba(45,39,31,.16)}
+  #narr.collapsed{max-height:72px}
+  #narr .head{zoom:1.3!important;padding:6px 12px 7px;background:transparent;border-bottom:0}
+  #stepKick{font-size:7.5px;letter-spacing:.20em;color:#8b6b43}
+  #stepTitle{font-size:12px;line-height:1.12;font-weight:700;letter-spacing:.015em;
+    text-transform:none;color:#3b3731;margin-top:2px}
+  #narr .body{padding:8px 12px 5px}
+  #stepBody{font-size:12px;line-height:1.48}
+  #badges,#timeline{display:none!important}
+  .foot{padding:7px 12px 9px;border-top:1px solid rgba(70,63,53,.12)}
+  #dots{margin-bottom:6px}
+  #dots i{height:3px;background:rgba(70,63,53,.12)}
+  #dots i.cur{background:#9a6a2f;box-shadow:none}
+  .navrow .btn{min-height:32px;padding:6px 8px;font-size:8.5px;
+    background:rgba(70,63,53,.045);border-color:rgba(70,63,53,.14)}
+  .navrow .btn.primary{background:#9a6a2f;color:#f8f5ef;border-color:#9a6a2f}
+  #grab{padding:5px 0 1px}
+  #grab::before{width:32px;height:3px;background:rgba(70,63,53,.25)}
+  .drawer{background:rgba(246,242,234,.99);border-color:rgba(70,63,53,.16);
+    box-shadow:0 12px 35px rgba(45,39,31,.2)}
+  #dossier{background:rgba(248,245,239,.99);border-color:rgba(154,106,47,.38);
+    box-shadow:0 12px 35px rgba(45,39,31,.2)}
+}
+@media (max-width: 900px){
+  #narr{background:rgba(249,247,242,0.77);position:fixed !important;left:0 !important;
+    right:0 !important;bottom:0 !important;top:auto !important;width:100% !important;
+    max-width:100% !important;min-width:0 !important;height:auto !important;max-height:72vh;
+    overflow-y:auto;transform:translateY(calc(100% - 54px));transition:transform .35s ease;
+    border-radius:14px 14px 0 0;box-shadow:0 -6px 20px rgba(0,0,0,.35);
+    padding:8px 14px calc(12px + env(safe-area-inset-bottom));z-index:1200}
+  #narr.open{transform:translateY(0) !important}
+}
+
+#map.is-panning .leaflet-cors-pane,
+#map.is-panning .leaflet-halos-pane,
+#map.is-panning .leaflet-nodes-pane,
+#map.is-panning .leaflet-marker-pane {opacity:0 !important;transition:none !important}
+#map .leaflet-cors-pane,
+#map .leaflet-halos-pane,
+#map .leaflet-nodes-pane,
+#map .leaflet-marker-pane {transition:opacity 0.35s ease-out}
+
+/* ===== ENDING SYNTHESIS ===== */
+#ending{position:relative;z-index:15;background:rgba(238,233,223,.99)}
+.end-slide{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:90px 24px 70px;position:relative}
+.end-container{max-width:940px;width:100%;margin:0 auto;border: 1px solid rgba(245, 166, 35, .35); border-radius: 12px; padding: 36px 32px; box-shadow: 0 20px 60px rgba(45, 39, 31, .18);}
+.end-head{margin-bottom:36px}
+.end-head .kick{font:700 10px var(--mono);letter-spacing:.26em;color:var(--amber);
+  text-transform:uppercase;margin-bottom:10px}
+.end-head h2{font:900 clamp(30px,5.4vw,48px)/1.06 var(--sans);text-transform:uppercase}
+.end-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:22px}
+.end-logic{background:var(--panel2);border:1px solid var(--line);padding:28px 24px;position:relative}
+.end-logic::before{content:attr(data-n);position:absolute;top:7px;right:7px;
+  font:300 italic clamp(30px,4.2vw,40px) var(--sans);color:rgba(70,63,53,.09);line-height:1}
+.end-logic .kick{font: 700 10px var(--mono); letter-spacing: .26em; color: var(--amber); text-transform: uppercase; margin-bottom: 10px;}
+.end-logic p{font:400 clamp(15px,2.2vw,18px)/1.55 var(--sans);color:#45413a}
+.end-state{background:var(--panel2);border:1px solid var(--line);border-left:4px solid var(--amber);
+  padding:32px 28px;position:relative;overflow:hidden}
+.end-state::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;
+  background:linear-gradient(90deg,var(--amber),var(--cyan));transform:scaleX(0);
+  transform-origin:left;transition:transform 1.8s cubic-bezier(.2,.7,.2,1) .6s}
+.end-state.visible::after{transform:scaleX(1)}
+.end-state .kick{display:block;margin-bottom:16px}
+.end-state p{font:clamp(17px,2.6vw,22px)/1.4 var(--sans);color:#3b3731}
+.end-state p em{font-style:normal;color:var(--amber)}
+.end-close{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;
+  gap:26px;margin-top:44px}
+.end-close .coda{font:300 italic clamp(14px,2.2vw,17px)/1.65 var(--sans);color:var(--dim);max-width:520px}
+.top-btn{font:600 11px var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--amber);
+  border:1px solid rgba(154,106,47,.4);padding:15px 24px;text-decoration:none;
+  transition:background .4s,color .4s;white-space:nowrap}
+.top-btn:hover{background:var(--amber);color:#fff}
+@media(max-width:780px){
+  .end-close{flex-direction:column;align-items:flex-start}
+  .end-slide{padding:70px 18px 50px}
+}
+/* Hide the story slides while the map sequence is playing */
+body.map-mode #storyContainer {
+  display: none !important;
+}
+/* Hide the outro slide while the map sequence is playing */
+body.map-mode #ending {
+  display: none !important;
+}
+/* Show the outro slide ONLY when the final map slide is reached */
+body.map-mode.final-slide #ending {
+  display: block !important;
+}
+#timeline{
+  display:none !important;
+}
+</style>
+</head>
+<body class="story-mode">
+
+<div id="map"></div>
+
+<header>
+  <div class="brand">
+    <span class="eyebrow">Geostrategic Explainer · Rimland → Networks → Control</span>
+    <h1>From <b>Military Presence</b> to <i>Network Power</i></h1>
+  </div>
+  <div class="hbtns">
+    <button class="btn" id="btnSettings">⚙ Display</button>
+    <button class="btn" id="btnLayers">☰ Layers</button>
+    <button class="btn primary" id="btnRun">▶ Run</button>
+    <button class="btn" id="btnReset">Reset</button>
+  </div>
+</header>
+
+<!-- ===== STORY SECTIONS ===== -->
+<div id="storyContainer">
+  <section class="story-section" data-story="0">
+    <div class="story-card">
+      <div class="story-kick">Prologue · The Question</div>
+      <h2 class="story-title">Who pays the bill?</h2>
+      <div class="story-body">
+        Every international system has a price. Someone must guard the sea lanes, the narrow straits, the routes of trade and energy. This briefing begins with <em>the cost of global hegemony</em> — and with a guardian asking whether the bill can be lowered without losing the world it guards.
+      </div>
+      <div class="story-gloss"><b>HEGEMONY</b> = the leading power that organises and protects the system.</div>
+      <div class="story-progress"></div>
+    </div>
+  </section>
+
+  <section class="story-section" data-story="1">
+    <div class="story-card">
+      <div class="story-kick">Chapter 1 · The Belt</div>
+      <h2 class="story-title">The world island wears a belt</h2>
+      <div class="story-body">
+        See Eurasia as one giant landmass. Around its edges runs a crowded coastal belt — the <em>Rimland</em> — where the ports, the canals, the pipelines and the great trade routes live. The old rule still governs the map: <em>who shapes the belt, shapes the world.</em>
+      </div>
+      <div class="story-visual">
+        <div class="briefFlow">
+          <div class="briefNode">Eurasian Core</div><div class="briefArrow">→</div>
+          <div class="briefNode">Rimland<br>Ports · Energy · Trade</div><div class="briefArrow">→</div>
+          <div class="briefNode">Global Access</div>
+        </div>
+      </div>
+      <div class="story-gloss"><b>RIMLAND</b> = the coastal belt of Eurasia where most people, trade and energy live.</div>
+      <div class="story-progress"></div>
+    </div>
+  </section>
+
+  <section class="story-section" data-story="2">
+    <div class="story-card">
+      <div class="story-kick">Chapter 2 · The Old Method</div>
+      <h2 class="story-title">Rule it by being there</h2>
+      <div class="story-body">
+        For decades the answer was physical presence — <em>bases, fleets, troops</em> guarding the chokepoints. It delivers immediate deterrence. But the more the system depends on one guardian being everywhere, the more the guardian inherits every risk of the system.
+      </div>
+      <div class="story-visual">
+        <div class="briefGrid">
+          <div class="briefCard"><h4>Presence</h4><p>Bases, fleets, airpower, troops.</p></div>
+          <div class="briefCard"><h4>Protection</h4><p>Guard the chokepoints and critical nodes.</p></div>
+          <div class="briefCard"><h4>Liability</h4><p>High visibility, high cost, high responsibility.</p></div>
+        </div>
+      </div>
+      <div class="story-gloss"><b>CHOKEPOINT</b> = a narrow gate at sea that the whole system must pass through.</div>
+      <div class="story-progress"></div>
+    </div>
+  </section>
+
+  <section class="story-section" data-story="3">
+    <div class="story-card">
+      <div class="story-kick">Chapter 3 · The Trap</div>
+      <h2 class="story-title">Success becomes a trap</h2>
+      <div class="story-body">
+        Here is the trap the analysis names: <em>success creates obligation.</em> The more indispensable the guardian becomes, the more every local disruption becomes its problem. This is  <em><b>THE SPYKMAN TRAP!</b></em> The prisoners of the Rimland are not only its states — they are the guardians themselves.
+      </div>
+      <div class="story-visual">
+        <div class="briefTrap">
+                   <figure class="briefEquationImg">
+            <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh5H6vCHzGk85BZXtrLIF4ktal4UFiJ1GiElDBMyDvl2uvje268Pbaz37Xr7FjC3cFpAEsogVokAoYeQ_UNK-MeYyhjP3l-X8HCa1Ta3E-D3mFoa2dw9UtDR1BsVQn76huWrPriHLDf-TL-Zpqgl8omwFx4ZbuAnPt2130GD2UbrUNhbFuRmJR1E1bPIvzd/s756/178713962677da.jpg" alt="Centrality ↑ + Concentration ↑ + Low substitutability + Security expectation → Security burden ↑">
+          </figure>
+          <div class="briefCard" style="display:flex;align-items:center;justify-content:center"><p style="font-size:13px;line-height:1.65"><em>The trap is not simply "too much military power."</em><br><br>It is the consequence of becoming the indispensable protector of a network whose critical nodes are concentrated and hard to replace.</p></div>
+        </div>
+      </div>
+      <div class="story-progress"></div>
+    </div>
+  </section>
+
+  <section class="story-section" data-story="4">
+    <div class="story-card">
+      <div class="story-kick">Chapter 4 · The First Move</div>
+      <h2 class="story-title">America steps back from Iraq</h2>
+      <div class="story-body">
+        The first symptom has a date: <em>30 September 2026</em> — the deadline for the completion of the American military withdrawal from Iraq. Read it carefully: not a departure from the region, but an attempt to <em>lower the cost of direct military oversight</em> while remaining central to the system.
+      </div>
+      <div class="story-visual">
+        <div class="briefGrid">
+          <div class="briefCard"><div class="briefMetric">30 · 09 · 2026</div><h4>The deadline</h4><p>US forces complete their withdrawal from Iraq.</p></div>
+          <div class="briefCard"><h4>The meaning</h4><p>Direct policing is the expensive instrument. The search for cheaper instruments begins.</p></div>
+        </div>
+      </div>
+      <div class="story-gloss"><b>THE WITHDRAWAL</b> = the symptom of the trap, not the end of the story.</div>
+      <div class="story-progress"></div>
+    </div>
+  </section>
+
+  <section class="story-section" data-story="5">
+    <div class="story-card">
+      <div class="story-kick">Chapter 5 · The Chokepoint</div>
+      <h2 class="story-title">War at Hormuz redraws the map</h2>
+      <div class="story-body">
+        When war closed in on the Strait of Hormuz, the system felt its own fragility: one sea gate, one point of failure. The pressure opened the road for <em>hydrocarbon pipelines from the Gulf toward Turkey through Kurdistan</em> — land bypasses that replace one chokepoint with a chain of valves and keystones on land.
+      </div>
+      <div class="story-visual">
+        <div class="briefFlow">
+          <div class="briefNode">Persian Gulf</div><div class="briefArrow">→</div>
+          <div class="briefNode">Kurdistan<br>Land bypass</div><div class="briefArrow">→</div>
+          <div class="briefNode">Turkey · Mediterranean</div>
+        </div>
+      </div>
+      <div class="story-gloss"><b>BYPASS</b> = an alternative road that avoids the dangerous gate.</div>
+      <div class="story-progress"></div>
+    </div>
+  </section>
+
+  <section class="story-section" data-story="6">
+    <div class="story-card">
+      <div class="story-kick">Chapter 6 · The Cable</div>
+      <h2 class="story-title">A cable that is not just a cable</h2>
+      <div class="story-body">
+        In the Eastern Mediterranean, Washington declares its support for the <em>Great Sea Interconnector</em> — the power cable Athens → Crete → Cyprus → Haifa. But American lawmakers do not read it as a local Greek‑Cypriot project: they place it inside <em>IMEC and the wider Rimland architecture</em>, where electricity, trade and security run in the same trench.
+      </div>
+      <div class="story-visual">
+        <div class="briefFlow">
+          <div class="briefNode">Athens</div><div class="briefArrow">→</div>
+          <div class="briefNode">Crete · Cyprus</div><div class="briefArrow">→</div>
+          <div class="briefNode">Haifa</div>
+        </div>
+      </div>
+      <div class="story-gloss"><b>GSI</b> = the proposed electricity bridge linking Greece, Cyprus and Israel.</div>
+      <div class="story-progress"></div>
+    </div>
+  </section>
+
+  <section class="story-section" data-story="7">
+    <div class="story-card">
+      <div class="story-kick">Chapter 7 · The New Method</div>
+      <h2 class="story-title">Do not leave — rewire</h2>
+      <div class="story-body">
+        So the answer to the trap is not withdrawal. It is <em>the network</em>: more routes, more suppliers, more partners — so that no single disruption forces one guardian to intervene everywhere. A mesh absorbs what would snap a single defended line. Military power remains the backstop; the network becomes the main instrument.
+      </div>
+      <div class="story-visual">
+        <div class="briefGrid">
+          <div class="briefCard"><h4>Redundancy</h4><p>More than one viable route.</p></div>
+          <div class="briefCard"><h4>Substitutability</h4><p>More than one supplier, port or energy mode.</p></div>
+          <div class="briefCard"><h4>Distributed security</h4><p>More partners share the burden.</p></div>
+        </div>
+        <div class="briefMesh"><span class="briefDot bd1"></span><span class="briefDot bd2"></span><span class="briefDot bd3"></span><span class="briefDot bd4"></span><span class="briefDot bd5"></span><div class="briefMeshLabel">A mesh absorbs disruption better than a single defended line</div></div>
+      </div>
+      <div class="story-progress"></div>
+    </div>
+  </section>
+
+  <section class="story-section" data-story="8">
+    <div class="story-card">
+      <div class="story-kick">Chapter 8 · Read the Map</div>
+      <h2 class="story-title">The map is the story, told in layers</h2>
+      <div class="story-body">
+        The scroll ends here; the geography begins. Each layer on the map is one chapter of this strategy — watch them couple into a single Rimland network, then check where the trap can reappear.
+      </div>
+      <div class="story-visual">
+        <div class="briefMapLegend">
+          <div class="briefLegendItem"><b>IMEC</b><span>East–west trade and logistics spine.</span></div>
+          <div class="briefLegendItem"><b>GSI</b><span>Electricity layer across the Eastern Med.</span></div>
+          <div class="briefLegendItem"><b>FOUR SEAS</b><span>Potential bypasses around Gulf chokepoints.</span></div>
+          <div class="briefLegendItem"><b>SGC</b><span>Existing Caspian-to-Europe energy route.</span></div>
+          <div class="briefLegendItem"><b>3SI / VIA CARPATHIA</b><span>North–south European coupling.</span></div>
+        </div>
+      </div>
+      <div class="story-enter">
+        <button class="btn primary" id="enterMap" style="zoom:0.85">Enter Interactive Map →</button>
+      </div>
+      <div class="story-progress"></div>
+    </div>
+  </section>
+</div>
+
+<!-- ===== MAP INTERACTIVE SECTION ===== -->
+<section id="mapSection"></section>
+
+<section id="narr" class="collapsed">
+  <div id="grab"></div>
+  <div class="head"><div id="stepKick">STANDBY</div><div id="stepTitle">Press ▶ Run to build the logic</div></div>
+  <div class="body">
+    <div id="stepBody">The story comes first. The map then demonstrates it geographically: <em>from a Rimland managed mainly through physical presence toward a Rimland increasingly organised through networks, with military power still acting as the security backstop.</em></div>
+    <div id="badges"></div>
+<div id="timeline" style="display:none !important"></div>
+  </div>
+  <div class="foot">
+    <div id="dots"></div>
+    <div class="navrow">
+      <button class="btn" id="btnPrev">◀ Prev</button>
+      <button class="btn primary" id="btnNext">Next ▶</button>
+    </div>
+    
+  </div>
+</section>
+
+<section class="drawer hiddenR" id="layers"></section>
+
+<section class="drawer hiddenR" id="settings">
+  <h3>Display Settings</h3>
+  <div class="setgroup">
+    <label class="t">Narrative text size</label>
+    <div class="seg" id="segFont">
+      <button data-v="s">S</button><button data-v="m" class="on">M</button><button data-v="l">L</button>
+    </div>
+  </div>
+  <div class="setgroup">
+    <label class="t">Animation intensity</label>
+    <div class="seg" id="segAnim">
+      <button data-v="full" class="on">Full</button><button data-v="reduced">Reduced</button>
+    </div>
+  </div>
+  <div class="setgroup">
+    <label class="t">Auto-play speed</label>
+    <div class="seg" id="segSpeed">
+      <button data-v="slow">Slow</button><button data-v="norm" class="on">Normal</button><button data-v="fast">Fast</button>
+    </div>
+  </div>
+  <div class="setnote">Settings persist on this device. On mobile: tap the grab-handle to expand/collapse the briefing sheet; drawers slide in from the right.</div>
+</section>
+
+<section id="dossier">
+  <button id="dClose">✕</button>
+  <div class="dt">Node Dossier</div>
+  <h2 id="dName"></h2>
+  <div class="dstat" id="dStat"></div>
+  <p id="dRole"></p>
+  <div class="links" id="dLinks"></div>
+</section>
+
+<!-- Status removed, navigation controls moved to .foot -->
+
+<!-- ===== ENDING SYNTHESIS ===== -->
+<section id="ending">
+
+  <!-- Title card -->
+  <div class="end-slide">
+    <div class="end-container">
+      <div class="end-head">
+        <div class="kick">End of briefing · Concluding Synthesis</div>
+        <h1 style="font: 900 clamp(26px, 4.6vw, 40px) / 1.06 var(--sans); text-transform: uppercase; margin-bottom: 14px;">What the map says?</h1>
+       <span class="kick">Conclusion First</span>
+        <p style="font: 400 clamp(15px, 2.2vw, 18px) / 1.55 var(--sans);"><b>A retreating hegemony</b> changes its <em style="color: var(--amber);">architecture of power.</em></p><br/>
+        <p style="font: 400 clamp(15px, 2.2vw, 18px) / 1.55 var(--sans);"><b>The age of the permanent garrison</b> is changing logic: <em style="color: var(--amber);">remain central without having to be everywhere.</em></p><br/> 
+        <p style="font: 400 clamp(15px, 2.2vw, 18px) / 1.55 var(--sans);"><b>Security</b> is no longer only a question of presence. It is a question of network architecture.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Conclusion 2 -->
+  <div class="end-slide">
+    <div class="end-container">
+      <div class="end-logic" data-n="02">
+        <h1 style="font: 900 clamp(26px, 4.6vw, 40px) / 1.06 var(--sans); text-transform: uppercase; margin-bottom: 14px;">The <me>Spykman Trap</em></h1><br/>
+        <h2>Not an inevitable decline: It is a structural vulnerability...</h2> <br/>
+        <span class="kick">Conclusion Second</span><br/><br/>
+        <p><b>Activation Triggers:</b></p>
+        <p>-<em style="color: var(--amber);">Rising Centrality:</em> Geopolitical weight shifts to a specific, critical zone.</p>
+        <p>-<em style="color: var(--amber);">Node Concentration:</em> Vital global functions collapse into a few fragile hubs.</p>
+        <p>-<em style="color: var(--amber);">Zero Redundancy:</em> Viable alternative routes or systems remain absent.</p>
+        <p>-<em  style="color: var(--amber);">Asymmetric Burden:</em> The cost of regional security is entirely offloaded onto a single hegemon.</p><br/>
+        <p><b>The Bottom Line:</b></p> 
+        <p>Superpowers do not simply decay; they overextend by bearing the sole liability for fragile networks.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Conclusion 3 -->
+  <div class="end-slide">
+    <div class="end-container">
+      <div class="end-logic" data-n="03">
+        <h1 style="font: 900 clamp(26px, 4.6vw, 40px) / 1.06 var(--sans); text-transform: uppercase; margin-bottom: 14px;">The <em style="color: var(--amber);">Rimland</em> is being <em style="color: var(--amber);">Rewired</em></h1><br/>
+        <span class="kick">Conclusion Third</span><br/><br/>
+        <p style="font:clamp(16px,2.4vw,20px)/1.4 var(--sans);"><b>Trade, energy, data, transport and infrastructure</b> are becoming a <em style="color: var(--amber);">unified strategic system</em></p><br/>
+        <p style="font:clamp(16px,2.4vw,20px)/1.4 var(--sans);"><b>Interconnection</b> becomes <em style="color: var(--amber);">leverage</em>.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Conclusion 4 -->
+  <div class="end-slide">
+    <div class="end-container">
+      <div class="end-logic" data-n="04">
+        <h1 style="font: 900 clamp(26px, 4.6vw, 40px) / 1.06 var(--sans); text-transform: uppercase; margin-bottom: 14px;">A New <em style="color: var(--amber);">Doctrine</em> is here</h1><br/>
+        <span class="kick">Conclusion Fourth</span><br/>
+        <p><b>In the 20th century, the question was:</b> Who controls the Rimland?</p><br/>
+        <p><b>In the 21st century, the question is:</b> Who bears the cost of keeping the Rimland interconnected?</p><br/>
+        <p>The <em style="color: var(--amber);">Spykman Trap</em> does not disappear when a power steps back. It returns wherever <b>centrality becomes concentration, concentration becomes dependence, and dependence becomes obligation.</b></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Outro -->
+  <div class="end-slide">
+    <div class="end-container">
+      <div class="end-state" id="endState">
+        <h1 style="font: 900 clamp(26px, 4.6vw, 40px) / 1.06 var(--sans); text-transform: uppercase; margin-bottom: 14px;">One <em style="color: var(--amber);">Thought</em> to remember...</h1>
+        <span class="kick"></span><br/>
+        <p>The strategic contest is no longer about <em style="color: var(--amber);">who has the military</em> to control a territory.<p><br/> 
+        <p>It is about <em style="color: var(--amber);">who designs the networks</em> through which the territory functions.</p>
+      </div>
+      <div class="end-close">
+        <a class="top-btn" href="#storyContainer" id="btnReturnStart">↑ Return to start</a>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// === ALL YOUR ORIGINAL MAP DATA (CORRIDORS, NODES, STEPS, ETC.) ===
+const C={amber:'#f5a623',cyan:'#4aa3e8',em:'#697a62',vio:'#7b68ee',red:'#9a5b50'};
+const ALL=[[16,5],[58,78]];
+
+const CORRIDORS=[
+ {id:'imec_sea1',g:'imec',nm:'IMEC · Maritime: Mumbai → Jebel Ali',c:'#6f7f86',w:4,s:'op',
+  pts:[[19.0760,72.8777],[21.5,63.0],[25.0115,55.0654]],dash:'10 10',
+  aff:{E:.6,T:1,D:.7,R:.6}},
+ {id:'imec_rail',g:'imec',nm:'IMEC · Rail: Jebel Ali → Riyadh → Amman → Haifa',c:'#9a6258',w:5,s:'op',
+  pts:[[25.0115,55.0654],[24.4,53.5],[24.7136,46.6753],[31.9454,35.9284],[32.7940,34.9896]],
+  aff:{E:.5,T:1,D:.8,R:.7}},
+ {id:'imec_sea2',g:'imec',nm:'IMEC · Maritime: Haifa → Piraeus',c:'#6f7f86',w:4,s:'op',
+  pts:[[32.7940,34.9896],[35.0,28.0],[37.9398,23.6525]],dash:'10 10',
+  aff:{E:.6,T:1,D:.7,R:.6}},
+
+ {id:'gsi',g:'gsi',nm:'GSI · Power Cable: Athens → Crete → Cyprus → Haifa',c:'#c9663a',w:4,s:'pro',
+  pts:[[37.9838,23.7275],[36.60,24.40],[35.3387,25.1442],[35.05,26.60],[34.85,28.40],[34.65,30.20],[34.50,31.80],[34.55,32.90],[34.72,33.10],[35.02,33.36],[34.85,33.90],[34.40,34.35],[33.60,34.75],[32.7940,34.9896]],
+  aff:{E:1,T:.6,D:.9,R:.85}},
+
+ {id:'agp',g:'fs',nm:'Arab Gas Pipeline (Op)',c:'#697a62',w:3,s:'op',
+  pts:[[31.13,33.80],[29.49,34.89],[31.9454,35.9284],[33.51,36.29],[34.73,36.71],[34.43,35.84]],
+  aff:{E:1,T:.5,D:.3,R:.85}},
+ {id:'azerbaijan_kilis',g:'fs',nm:'Azerbaijan–Kilis–Aleppo (Op)',c:'#667f8a',w:3,s:'op',
+  pts:[[40.4048,49.8671],[40.60,46.50],[41.71,44.82],[41.10,43.10],[39.90,41.27],[39.50,37.00],[37.60,36.90],[36.71,37.11],[36.20,37.13]],
+  aff:{E:1,T:.5,D:.3,R:.85}},
+ {id:'kirkuk_baniyas',g:'fs',nm:'Kirkuk–Baniyas Oil (Defunct / Proposed)',c:'#9a9389',w:3,s:'pro',
+  pts:[[35.46,44.39],[34.73,36.71],[35.18,35.94]],dash:'6 6',
+  aff:{E:1,T:.5,D:.3,R:.9}},
+ {id:'basrah_ceyhan',g:'fs',nm:'Basrah–Haditha–Kirkuk–Silopi–Ceyhan (Planned)',c:'#9a5f54',w:3,s:'pro',
+  pts:[[30.50,47.80],[31.80,45.50],[34.14,42.37],[34.93,43.48],[35.46,44.39],[37.25,42.47],[37.30,39.50],[36.89,35.97]],dash:'6 6',
+  aff:{E:1,T:.6,D:.3,R:.95}},
+ {id:'ceyhan_samsun',g:'fs',nm:'Ceyhan–Samsun (Proposed)',c:'#776c78',w:3,s:'pro',
+  pts:[[36.89,35.97],[37.37,36.10],[38.02,36.50],[39.35,36.40],[40.32,36.55],[41.28,36.33]],dash:'6 6',
+  aff:{E:1,T:.5,D:.3,R:.9}},
+
+ {id:'scp',g:'cas',nm:'South Caucasus Pipeline (SCP)',c:'#697a62',w:4,s:'op',
+  pts:[[40.4048,49.8671],[40.61,47.15],[40.68,46.36],[41.6938,44.8015],[41.6428,42.9770],[41.5,42.8]],
+  aff:{E:1,T:.5,D:.4,R:.9}},
+ {id:'tanap',g:'cas',nm:'Trans-Anatolian Pipeline (TANAP)',c:'#9a5b50',w:4,s:'op',
+  pts:[[41.5,42.8],[39.90,41.27],[39.75,39.50],[39.75,37.01],[39.84,33.51],[39.77,30.52],[40.2281,27.2422],[40.9533,26.3067]],
+  aff:{E:1,T:.6,D:.4,R:.95}},
+ {id:'tap',g:'cas',nm:'Trans Adriatic Pipeline (TAP)',c:'#667f8a',w:4,s:'op',
+  pts:[[40.9533,26.3067],[40.84,25.87],[40.6401,22.9444],[40.52,21.26],[40.72,19.55],[40.6395,17.9410]],
+  aff:{E:1,T:.6,D:.4,R:.95}},
+ {id:'pow',g:'cas',nm:'"Pipeline on Wheels" (Road, Op)',c:'#a07a45',w:3,s:'op',
+  pts:[[36.80,42.05],[36.20,37.13],[35.52,35.78]],
+  aff:{E:1,T:.5,D:.3,R:.75}},
+
+ {id:'vc_main',g:'ssi',nm:'Via Carpathia Main Trunk: Klaipėda → Sofia',c:'#5f735c',w:3,s:'op',
+  pts:[[55.7033,21.1443],[54.8985,23.9036],[53.1325,23.1688],[51.2465,22.5684],[50.0412,21.9991],[48.7164,21.2611],[47.5316,21.6273],[47.0513,21.9189],[46.1866,21.3123],[45.7537,21.2257],[45.6900,21.9033],[43.9911,22.9328],[42.6977,23.3219]],
+  aff:{E:.7,T:1,D:.8,R:1}},
+ {id:'vc_greece',g:'ssi',nm:'Via Carpathia · Aegean Branch: Sofia → Thessaloniki',c:'#5f735c',w:3,s:'op',
+  pts:[[42.6977,23.3219],[40.6401,22.9444]],
+  aff:{E:.7,T:1,D:.8,R:1}},
+ {id:'vc_constanta',g:'ssi',nm:'Via Carpathia · Black Sea Branch: Lugoj → Constanța',c:'#5f735c',w:3,s:'op',
+  pts:[[45.6900,21.9033],[45.7983,24.1257],[44.8565,24.8692],[44.4323,26.1063],[44.1792,28.6498]],dash:'8 6',
+  aff:{E:.8,T:.9,D:.7,R:1}},
+ {id:'vc_turkey',g:'ssi',nm:'Via Carpathia · Svilengrad/Turkey Branch',c:'#5f735c',w:3,s:'op',
+  pts:[[42.6977,23.3219],[42.1354,24.7453],[41.7686,26.2023]],dash:'8 6',
+  aff:{E:.7,T:1,D:.7,R:1}},
+
+ {id:'vc_rev_sofia',g:'vc_gas',nm:'Vertical Corridor · Revithousa → Thessaloniki → Stara Zagora',c:'#2b6cb0',w:4,s:'op',
+   pts:[[37.97,23.38],[37.98,23.73],[39.63,22.41],[40.6401,22.9444],[41.20,23.80],[42.42,25.63]],
+  aff:{E:1,T:.8,D:.7,R:.9}},
+ {id:'vc_icgb',g:'vc_gas',nm:'Vertical Corridor · ICGB (Alexandroupolis → Stara Zagora)',c:'#2b6cb0',w:4,s:'op',
+  pts:[[40.84,25.87],[41.12,25.40],[42.42,25.63]],
+  aff:{E:1,T:.8,D:.7,R:.9}},
+ {id:'vc_stara_ruse',g:'vc_gas',nm:'Vertical Corridor · Stara Zagora → Negru Vodă',c:'#2b6cb0',w:4,s:'op',
+   pts:[[42.42,25.63],[42.95,26.55],[43.8167,28.2179]],
+  aff:{E:1,T:.8,D:.7,R:.9}},
+ {id:'vc_rom_ua_md_ukr',g:'vc_gas',nm:'Vertical Corridor · Negru Vodă → Isaccea / Orlivka → Rozdilna',c:'#2b6cb0',w:4,s:'op',
+   pts:[[43.8167,28.2179],[44.55,28.40],[45.27,28.46],[46.05,29.30],[46.8547,30.0711]],
+  aff:{E:1,T:.8,D:.7,R:.9}},
+ {id:'vc_bucharest_negru',g:'vc_gas',nm:'Vertical Corridor · Bucharest → Negru Vodă',c:'#2b6cb0',w:4,s:'op',
+   pts:[[44.4323,26.1063],[44.25,26.65],[43.95,27.35],[43.8167,28.2179]],
+  aff:{E:1,T:.8,D:.7,R:.9}},
+ {id:'vc_west_hun_svk',g:'vc_gas',nm:'Vertical Corridor · Western Branch: Timișoara → Szeged → Bratislava',c:'#2b6cb0',w:3,s:'op',
+   pts:[[44.4323,26.1063],[44.33,23.79],[45.7537,21.2257],[46.25,20.14],[48.14,17.10]],
+  aff:{E:1,T:.8,D:.7,R:.9}},
+
+ {id:'turkstream',g:'ctr',nm:'TurkStream · active leverage',c:'#9a5b50',w:2,s:'ctr',
+  pts:[[44.87,37.32],[43.4,34.0],[42.2,32.0],[41.62,31.6]],dash:'8 4',
+  aff:{E:.7,T:.3,D:.2,R:1}},
+];
+
+const NODES=[
+ {id:'mumbai',ll:[19.0760,72.8777],n:'Mumbai',st:'OPERATIONAL',role:'Eastern anchor of IMEC. Indian Ocean trade enters the architecture here.',links:['imec_sea1'],cl:''},
+ {id:'jebelAli',ll:[25.0115,55.0654],n:'Jebel Ali',st:'OPERATIONAL',role:'Gulf transshipment pivot where the Arabian overland leg begins.',links:['imec_sea1','imec_rail'],cl:''},
+ {id:'riyadh',ll:[24.7136,46.6753],n:'Riyadh',st:'OPERATIONAL',role:'Arabian spine of IMEC — longest single overland hop.',links:['imec_rail'],cl:''},
+ {id:'amman',ll:[31.9454,35.9284],n:'Amman',st:'PROPOSED JUNCTION',role:'Where IMEC meets the Arab Gas Pipeline — the east–west axis crosses the proposed Four Seas grid.',links:['imec_rail','agp'],cl:''},
+ {id:'haifa',ll:[32.7940,34.9896],n:'Haifa',st:'OPERATIONAL',role:'IMEC maritime interface on the Levantine coast — and the southern anchor of the GSI power cable: the electric axis lands where the trade axis turns maritime.',links:['imec_rail','imec_sea2','gsi'],cl:''},
+ {id:'piraeus',ll:[37.9398,23.6525],n:'Piraeus',st:'CONTESTED',role:'IMEC EU gateway — currently non-aligned port-operator control. The architecture\'s western landing must sit under allied governance.',links:['imec_sea2'],cl:'contested'},
+ {id:'athens',ll:[37.9838,23.7275],n:'Athens',st:'CHARTERED · PROPOSED',role:'European anchor of the Great Sea Interconnector — the cable lands on the EU mainland here, wiring the Eastern Med power bridge into the European grid and the 3SI backbone.',links:['gsi'],cl:''},
+ {id:'crete',ll:[35.3387,25.1442],n:'Crete (Heraklion)',st:'CHARTERED · PROPOSED',role:'Midway pivot of the GSI — the Athens–Cyprus leg touches the island, mirroring IMEC\'s maritime geography one sea south.',links:['gsi'],cl:''},
+ {id:'nicosia',ll:[35.02,33.36],n:'Nicosia',st:'CHARTERED · PROPOSED',role:'Island hub of the GSI — the Cyprus landing binding Israel\'s power to Europe; Washington and Congress tie the cable directly to IMEC.',links:['gsi'],cl:''},
+ {id:'baku',ll:[40.4048,49.8671],n:'Baku (Shah Deniz)',st:'OPERATIONAL',role:'Caspian supplier. Flows already reach the Mediterranean via routes that bypass Russian territory.',links:['scp','azerbaijan_kilis'],cl:''},
+ {id:'kilis',ll:[36.71,37.11],n:'Kilis',st:'OPERATIONAL',role:'Border valve — the Azerbaijan line touches here; the Aleppo approach begins here.',links:['azerbaijan_kilis'],cl:''},
+ {id:'achalziche',ll:[41.6428,42.9770],n:'Achalziche',st:'OPERATIONAL',role:'SCP transit point across Georgia.',links:['scp'],cl:''},
+ {id:'tiflis',ll:[41.6938,44.8015],n:'Tiflis',st:'OPERATIONAL',role:'Caucasus transit junction shared by SCP and the Azerbaijan–Kilis line.',links:['scp','azerbaijan_kilis'],cl:''},
+ {id:'biga',ll:[40.2281,27.2422],n:'Biga',st:'OPERATIONAL',role:'TANAP node on the Marmara coast.',links:['tanap'],cl:''},
+ {id:'kipoi',ll:[40.9533,26.3067],n:'Kipoi',st:'OPERATIONAL',role:'Greece/Türkiye border — TANAP hands off to TAP here.',links:['tanap','tap'],cl:''},
+ {id:'brindisi',ll:[40.6395,17.9410],n:'Brindisi',st:'OPERATIONAL',role:'TAP landing in southern Italy — Caspian supply enters EU territory.',links:['tap'],cl:''},
+ {id:'samsun',ll:[41.28,36.33],n:'Samsun',st:'PROPOSED',role:'Black Sea terminus of the proposed Ceyhan–Samsun line — alternative exit from the Mediterranean valve.',links:['ceyhan_samsun'],cl:''},
+ {id:'ceyhan',ll:[36.89,35.97],n:'Ceyhan',st:'KEYSTONE',role:'The Mediterranean valve. Azerbaijan and Basrah-Ceyhan pipelines discharge here — the single most leveraged point in the architecture.',links:['basrah_ceyhan','ceyhan_samsun'],cl:'keystone'},
+ {id:'kirkuk',ll:[35.46,44.39],n:'Kirkuk',st:'OPERATIONAL VALVE',role:'Northern Iraq valve. Feeds both Kirkuk–Baniyas and Basrah–Ceyhan — one source, two outlets.',links:['kirkuk_baniyas','basrah_ceyhan'],cl:'valve'},
+ {id:'homs',ll:[34.73,36.71],n:'Homs',st:'PROPOSED VALVE',role:'The Syrian valve hub — Arab Gas, Kirkuk–Baniyas and Pipeline on Wheels converge here.',links:['agp','kirkuk_baniyas','pow'],cl:'valve'},
+ {id:'basrah',ll:[30.50,47.80],n:'Basrah',st:'PLANNED ORIGIN',role:'Origin of the Basrah–Haditha–Kirkuk–Silopi–Ceyhan planned line — southern Iraqi supply turning overland.',links:['basrah_ceyhan'],cl:''},
+ {id:'rabia',ll:[36.80,42.05],n:'Rabia',st:'OPERATIONAL',role:'Iraq/Syria border node for Pipeline on Wheels.',links:['pow'],cl:''},
+ {id:'klaipeda',ll:[55.7033,21.1443],n:'Klaipėda',st:'OPERATIONAL',role:'Baltic LNG gate and km 0 of Via Carpathia — northern terminus of the north–south backbone.',links:['vc_main'],cl:'vc'},
+ {id:'kaunas',ll:[54.8985,23.9036],n:'Kaunas',st:'OPERATIONAL',role:'Lithuanian spine of Via Carpathia.',links:['vc_main'],cl:'vc'},
+ {id:'bialystok',ll:[53.1325,23.1688],n:'Białystok',st:'OPERATIONAL',role:'Polish segment of the Via Carpathia trunk.',links:['vc_main'],cl:'vc'},
+ {id:'lublin',ll:[51.2465,22.5684],n:'Lublin',st:'OPERATIONAL',role:'Polish logistics hub on the Via Carpathia trunk.',links:['vc_main'],cl:'vc'},
+ {id:'rzeszow',ll:[50.0412,21.9991],n:'Rzeszów',st:'OPERATIONAL',role:'Eastern-flank gateway — logistics hinge between the 3SI backbone and the Levantine corridor.',links:['vc_main'],cl:'vc'},
+ {id:'kosice',ll:[48.7164,21.2611],n:'Košice',st:'OPERATIONAL',role:'Slovak section of Via Carpathia.',links:['vc_main'],cl:'vc'},
+ {id:'debrecen',ll:[47.5316,21.6273],n:'Debrecen',st:'OPERATIONAL',role:'Hungarian section of Via Carpathia.',links:['vc_main'],cl:'vc'},
+ {id:'oradea',ll:[47.0513,21.9189],n:'Oradea',st:'OPERATIONAL',role:'Romanian entry point of Via Carpathia.',links:['vc_main'],cl:'vc'},
+ {id:'arad',ll:[46.1866,21.3123],n:'Arad',st:'OPERATIONAL',role:'Romanian segment of Via Carpathia.',links:['vc_main'],cl:'vc'},
+ {id:'timisoara',ll:[45.7537,21.2257],n:'Timișoara',st:'OPERATIONAL',role:'Western Romanian hub on Via Carpathia and Vertical Corridor.',links:['vc_main','vc_west_hun_svk'],cl:'vc'},
+ {id:'lugoj',ll:[45.6900,21.9033],n:'Lugoj',st:'OPERATIONAL',role:'Where the Via Carpathia trunk splits — south to Sofia or east to Constanța.',links:['vc_main','vc_constanta'],cl:'vc'},
+ {id:'sibiu',ll:[45.7983,24.1257],n:'Sibiu',st:'OPERATIONAL',role:'Transylvanian crossing on the Black Sea branch.',links:['vc_constanta'],cl:'vc'},
+ {id:'pitesti',ll:[44.8565,24.8692],n:'Pitești',st:'OPERATIONAL',role:'Romanian segment of the Constanța branch.',links:['vc_constanta'],cl:'vc'},
+ {id:'bucharest',ll:[44.4323,26.1063],n:'Bucharest',st:'OPERATIONAL',role:'Danube–Black Sea hinge, routing the backbone toward both the Aegean and the Black Sea.',links:['vc_constanta','vc_bucharest_negru','vc_west_hun_svk'],cl:'vc'},
+ {id:'constanta',ll:[44.1792,28.6498],n:'Constanța',st:'COUPLING POINT',role:'3SI Black Sea hub — one of the two places where the Four Seas grid touches the north–south backbone.',links:['vc_constanta'],cl:'vc'},
+ {id:'calafat',ll:[43.9911,22.9328],n:'Calafat',st:'OPERATIONAL',role:'Danube crossing on the main Via Carpathia trunk.',links:['vc_main'],cl:'vc'},
+ {id:'sofia',ll:[42.6977,23.3219],n:'Sofia',st:'OPERATIONAL',role:'Bulgarian hinge where Via Carpathia splits to the Aegean, Black Sea and Turkey branches.',links:['vc_main','vc_greece','vc_turkey'],cl:'vc'},
+ {id:'plovdiv',ll:[42.1354,24.7453],n:'Plovdiv',st:'OPERATIONAL',role:'Bulgarian node on the Turkey branch.',links:['vc_turkey'],cl:'vc'},
+ {id:'svilengrad',ll:[41.7686,26.2023],n:'Svilengrad',st:'OPERATIONAL',role:'Bulgaria/Turkey border — gateway to the Levantine corridor.',links:['vc_turkey'],cl:'vc'},
+ {id:'thessaloniki',ll:[40.6401,22.9444],n:'Thessaloniki',st:'COUPLING POINT',role:'Aegean junction where the Revithousa branch connects before continuing north-east to Stara Zagora.',links:['vc_greece','tap','vc_rev_sofia'],cl:'vc'},
+ {id:'revithousa',ll:[37.97,23.38],n:'Revithousa',st:'OPERATIONAL',role:'LNG terminal in southern Greece, feeding the revised Vertical Corridor branch via Thessaloniki to Stara Zagora.',links:['vc_rev_sofia'],cl:''},
+ {id:'alexandroupolis',ll:[40.84,25.87],n:'Alexandroupolis',st:'OPERATIONAL',role:'FSRU LNG terminal in northern Greece, feeding the ICGB and the Vertical Gas Corridor northwards.',links:['vc_icgb'],cl:''},
+ {id:'komotini',ll:[41.12,25.40],n:'Komotini',st:'OPERATIONAL',role:'Key transit node on the ICGB interconnector.',links:['vc_icgb'],cl:''},
+ {id:'stara_zagora',ll:[42.42,25.63],n:'Stara Zagora',st:'OPERATIONAL',role:'Bulgarian hub where the ICGB meets the national grid and receives the Revithousa branch before continuing to Romania.',links:['vc_icgb','vc_rev_sofia','vc_stara_ruse'],cl:''},
+ {id:'negru_voda',ll:[43.8167,28.2179],n:'Negru Vodă',st:'OPERATIONAL',role:'Romanian node on the revised Vertical Corridor, between Stara Zagora and Isaccea / Orlivka.',links:['vc_stara_ruse','vc_rom_ua_md_ukr','vc_bucharest_negru'],cl:''},
+ {id:'isaccea',ll:[45.27,28.46],n:'Isaccea / Orlivka',st:'OPERATIONAL',role:'Romania–Ukraine crossing on the revised Vertical Corridor, with the route continuing west of Odesa to Rozdilna.',links:['vc_rom_ua_md_ukr'],cl:''},
+ {id:'rozdilna',ll:[46.8547,30.0711],n:'Rozdilna',st:'OPERATIONAL',role:'Ukrainian terminus of the revised Vertical Corridor shown here, east of Isaccea / Orlivka and west of Odesa.',links:['vc_rom_ua_md_ukr'],cl:''},
+ {id:'craiova',ll:[44.33,23.79],n:'Craiova',st:'OPERATIONAL',role:'Romanian hub on the western branch towards Hungary.',links:['vc_west_hun_svk'],cl:''},
+ {id:'szeged',ll:[46.25,20.14],n:'Szeged',st:'OPERATIONAL',role:'Hungarian transit point on the revised western extension from Timișoara to Bratislava.',links:['vc_west_hun_svk'],cl:''},
+ {id:'bratislava',ll:[48.14,17.10],n:'Bratislava',st:'OPERATIONAL',role:'Slovakian terminus of the revised western branch: Timișoara → Szeged → Bratislava.',links:['vc_west_hun_svk'],cl:''},
+];
+
+const SEAS=[['Persian Gulf',[27.3,51.2],1],['Caspian Sea',[42.4,50.7],1],['Mediterranean',[33.3,21.6],1],['Black Sea',[43.7,33.4],1],['Baltic Sea',[56.9,19.7],0],['Adriatic Sea',[42.9,14.1],0],['Arabian Sea',[19,65],0]];
+const GROUPS={imec:'IMEC — EAST–WEST AXIS',gsi:'GREAT SEA INTERCONNECTOR · IMEC ENERGY LAYER',fs:'FOUR SEAS PROJECT',cas:'CASPIAN–MEDITERRANEAN SYSTEM',ssi:'VIA CARPATHIA (3SI BACKBONE)',vc_gas:'VERTICAL GAS CORRIDOR',ctr:'COUNTER-GEOGRAPHY'};
+const ST_LBL={op:['OPERATIONAL','st-op'],pro:['PROPOSED','st-pro'],ctr:['CONTESTED','st-ctr']};
+
+const SSI_MEMBERS=new Set(["Estonia","Latvia","Lithuania","Poland","Czechia","Czech Republic","Slovakia","Austria","Hungary","Slovenia","Croatia","Romania","Bulgaria","Greece"]);
+const SSI_ASSOCIATES=new Set(["Ukraine","Moldova","Republic of Moldova","Albania","Montenegro"]);
+
+const STEPS=[
+ {k:'MAP 0 · ORIENT',t:'Read the Rimland as a System',rimland:true,b:'You are now on the map. Start with the geography: from the Indian Ocean and Persian Gulf through the Levant and Aegean, up to the Black Sea and Baltic. <em>The strategic objective presented here is not to occupy every part of this belt, but to shape the connections that make the belt function.</em>',badges:[['RIMLAND = CONNECTIVITY SPACE','b-violet'],['MAP ORIENTATION','b-amber']],draw:[],focus:ALL},
+ {k:'MAP 1 · EAST–WEST',t:'IMEC Creates the Spine',b:'The first layer is the <em>India–Middle East–Europe Economic Corridor</em>: Mumbai → Jebel Ali → Riyadh → Amman → Haifa → Piraeus. Read it as the commercial and logistics spine. Its strategic value in this framework is network integration: several jurisdictions become linked by one east–west flow.',badges:[['TRADE + LOGISTICS','b-cyan'],['EAST–WEST AXIS','b-cyan']],draw:['imec_sea1','imec_rail','imec_sea2'],focus:[[17.5,20],[42,78]]},
+ {k:'MAP 2 · ELECTRICITY',t:'GSI Adds an Energy Layer',b:'Now add the <em>Great Sea Interconnector</em>: Athens → Crete → Cyprus → Haifa. The point is not simply another line on the map. It shows how different infrastructures can occupy the same strategic geography, making trade, power and security increasingly interdependent.',badges:[['ELECTRICITY LAYER','b-amber'],['NETWORK COUPLING','b-cyan']],draw:['gsi'],focus:[[31.5,22],[39.5,36]]},
+ {k:'MAP 3 · BYPASS',t:'Four Seas Tries to Break Chokepoint Dependence',b:'The Four Seas logic addresses a different vulnerability: <em>what happens when a maritime chokepoint becomes a coercive bottleneck?</em> The proposed corridors from the Gulf through Iraq and Syria toward the Mediterranean add land-based alternatives. Ceyhan is a keystone because several routes converge there—but that also creates a new concentration risk.',badges:[['HORMUZ BYPASS','b-amber'],['CEYHAN = KEYSTONE','b-amber'],['NEW CONCENTRATION RISK','b-red']],draw:['kirkuk_baniyas','basrah_ceyhan','ceyhan_samsun','agp'],focus:[[25,28],[37.5,50]]},
+ {k:'MAP 4 · CASPIAN',t:'The Southern Gas Corridor Shows the Model in Operation',b:'The <em>SCP → TANAP → TAP</em> chain already carries Caspian gas toward southern Europe while bypassing Russian territory. In the network argument, its importance is methodological: <em>build an alternative before a crisis makes the alternative urgent.</em>',badges:[['OPERATIONAL','b-green'],['ALTERNATIVE SUPPLY','b-green']],draw:['scp','tanap','tap'],focus:[[35,20],[46,50]]},
+ {k:'MAP 5 · NORTH–SOUTH',t:'Three Seas Connects the Rimland to Europe',b:'Via Carpathia adds the north–south dimension: Baltic ↔ Central Europe ↔ Balkans ↔ Aegean / Black Sea. The strategic move is <em>coupling</em>. Southern corridors no longer end at the Mediterranean; they can plug into a larger European logistics space. Meanwhile, the blue <em>Vertical Gas Corridor</em> integrates LNG from Revithousa and Alexandroupolis.',badges:[['3SI / VIA CARPATHIA','b-violet'],['NORTH–SOUTH COUPLING','b-violet'],['VERTICAL GAS CORRIDOR','b-cyan']],draw:['vc_main','vc_greece','vc_constanta','vc_turkey','vc_rev_sofia','vc_icgb','vc_stara_ruse','vc_rom_ua_md_ukr','vc_bucharest_negru','vc_west_hun_svk'],ssiFocus:true,focus:[[39.5,11],[57.5,32]]},
+ {k:'MAP 6 · COUPLING',t:'The Point Is the Mesh',b:'With the layers together, the map changes character. IMEC carries trade; GSI adds electricity; Four Seas adds possible bypasses; the Southern Gas Corridor adds Caspian supply; Via Carpathia provides a north–south European spine. <em>The strategic value comes from coupling these layers, not from any one project by itself.</em>',badges:[['MULTI-MODE NETWORK','b-cyan'],['MULTI-DIRECTIONAL','b-green'],['PARTNERED INFRASTRUCTURE','b-violet']],draw:[],emphX:['imec_sea1','imec_rail','imec_sea2','gsi','agp','azerbaijan_kilis','kirkuk_baniyas','basrah_ceyhan','ceyhan_samsun','scp','tanap','tap','pow','vc_main','vc_greece','vc_constanta','vc_turkey','vc_rev_sofia','vc_icgb','vc_stara_ruse','vc_rom_ua_md_ukr','vc_bucharest_negru','vc_west_hun_svk'],focus:ALL},
+ {k:'MAP 7 · TRAP CHECK',t:'But the Trap Can Reappear',b:'Look closely at the architecture: <em>Ceyhan is a keystone, Hormuz remains a chokepoint, and any single highly central junction can become the next vulnerability.</em> The network strategy works only if alternatives are genuinely substitutable and security responsibility does not collapse back onto one protector.',badges:[['CENTRALITY = LEVERAGE','b-amber'],['CENTRALITY = RISK','b-red'],['SUBSTITUTABILITY MATTERS','b-green']],draw:['kirkuk_baniyas','basrah_ceyhan','ceyhan_samsun'],emphX:['gsi','imec_rail','scp','tanap','tap'],rings:true,focus:[[26,27],[42,55]]},
+ {k:'MAP 8 · RESILIENCE',t:'Avoid the Trap with Redundancy',b:'A resilient design is not "no chokepoints." Geography will always create some. The objective is <em>enough alternative routes, suppliers, ports and modes that one failure does not collapse the system</em>. This raises substitutability, lowers concentration risk and spreads responsibility across partners.',badges:[['SUBSTITUTABILITY ↑','b-green'],['CONCENTRATION ↓','b-green'],['DISTRIBUTED SECURITY','b-green']],draw:[],emphX:['imec_sea1','imec_rail','imec_sea2','gsi','agp','azerbaijan_kilis','kirkuk_baniyas','basrah_ceyhan','ceyhan_samsun','scp','tanap','tap','pow','vc_main','vc_greece','vc_constanta','vc_turkey','vc_rev_sofia','vc_icgb','vc_stara_ruse','vc_rom_ua_md_ukr','vc_bucharest_negru','vc_west_hun_svk'],rings:true,focus:[[23,12],[55,62]]},
+ {k:'MAP 9 · END STATE',t:'Control the Rimland by Organising It',rimland:true,b:'The interpretation: <em>military power remains the backstop, but network architecture becomes the main organising instrument.</em> Influence comes from shaping the corridors, nodes, standards and security arrangements through which the Rimland functions. The map also shows that this is contested: competing networks can counter it, and every new node creates the possibility of a new trap.',badges:[['NETWORK = PRIMARY ORGANISING LOGIC','b-cyan'],['MILITARY = BACKSTOP','b-red'],['RIMLAND = CONTESTED NETWORK SPACE','b-violet']],draw:[],emphX:['imec_sea1','imec_rail','imec_sea2','gsi','agp','azerbaijan_kilis','kirkuk_baniyas','basrah_ceyhan','ceyhan_samsun','scp','tanap','tap','pow','vc_main','vc_greece','vc_constanta','vc_turkey','vc_rev_sofia','vc_icgb','vc_stara_ruse','vc_rom_ua_md_ukr','vc_bucharest_negru','vc_west_hun_svk'],showCtr:true,timeline:true,focus:ALL}
+];
+
+const STEP_DUR=[7000,8500,8500,9500,8500,9000,9500,9000,9500,11000];
+
+const SETTINGS=Object.assign({font:'m',anim:'full',speed:'norm'},
+ JSON.parse(localStorage.getItem('ca_settings')||'{}'));
+const SPEED_MULT={slow:1.5,norm:1,fast:.62};
+function applySettings(){
+ document.documentElement.style.setProperty('--narr-size',{s:'12px',m:'13px',l:'15px'}[SETTINGS.font]);
+ document.body.classList.toggle('reduced',SETTINGS.anim==='reduced');
+ localStorage.setItem('ca_settings',JSON.stringify(SETTINGS));
+ [['segFont','font'],['segAnim','anim'],['segSpeed','speed']].forEach(([g,k])=>{
+   document.querySelectorAll('#'+g+' button').forEach(b=>b.classList.toggle('on',b.dataset.v===SETTINGS[k]));});
+}
+document.querySelectorAll('#segFont button').forEach(b=>b.onclick=()=>{SETTINGS.font=b.dataset.v;applySettings();});
+document.querySelectorAll('#segAnim button').forEach(b=>b.onclick=()=>{SETTINGS.anim=b.dataset.v;applySettings();if(SETTINGS.anim==='reduced')setFlows([]);});
+document.querySelectorAll('#segSpeed button').forEach(b=>b.onclick=()=>{SETTINGS.speed=b.dataset.v;applySettings();});
+applySettings();
+
+// === MAP INITIALIZATION ===
+const map=L.map('map',{zoomControl:false,minZoom:3,maxZoom:10,worldCopyJump:true});
+map.createPane('lands'); map.getPane('lands').style.zIndex=340;
+map.createPane('halos'); map.getPane('halos').style.zIndex=380;
+map.createPane('cors');  map.getPane('cors').style.zIndex=400;
+map.createPane('nodes'); map.getPane('nodes').style.zIndex=440;
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+ {attribution:'&copy; OpenStreetMap &copy; CARTO ',subdomains:'abcd'}).addTo(map);
+L.control.zoom({position:'bottomright'}).addTo(map);
+map.fitBounds(ALL);
+
+const rimlandPoly = L.polygon([
+  [69.8, 30.0], [71.1, 27.8], [70.5, 23.5], [69.0, 15.0], [67.5, 12.0], [64.0, 10.0], [62.0, 5.0], [59.0, 4.0], [58.0, 7.0],
+  [57.7, 10.6], [55.0, 8.0], [53.5, 6.5], [52.0, 4.0], [51.0, 2.5],
+  [53.0, 1.0], [58.0, 0.0], [60.8, -1.0], [58.5, -5.0],
+  [55.0, -8.5], [54.0, -10.5], [51.5, -10.5], [50.0, -5.5],
+  [48.5, -5.0], [47.0, -2.5], [43.8, -9.2], [41.0, -9.0], [38.7, -9.5], [37.0, -9.0], [36.0, -5.5],
+  [36.7, -2.5], [37.5, -0.5], [41.3, 2.1],
+  [43.3, 5.3], [44.4, 8.9], [42.0, 12.0], [40.8, 14.5],
+  [38.0, 15.5], [36.5, 15.0], [38.0, 12.0], [40.0, 18.5], [41.8, 16.2], [45.0, 12.5],
+  [45.0, 14.0], [42.0, 19.0], [38.0, 21.0], [36.4, 22.5], [35.0, 25.0], [36.0, 28.0], [38.0, 24.0], [40.5, 26.0],
+  [36.8, 28.0], [36.8, 31.0], [36.0, 36.0], [34.0, 35.5], [32.0, 34.5], [31.5, 34.0],
+  [31.2, 32.3], [29.9, 32.5],
+  [27.8, 34.2], [29.5, 34.9],
+  [29.0, 34.8], [27.0, 35.5], [25.0, 37.0], [20.0, 39.0], [15.0, 42.0], [12.5, 43.5], [12.0, 45.0],
+  [14.5, 50.0], [17.0, 54.0], [20.0, 58.0], [22.5, 59.8], [24.0, 58.0],
+  [26.0, 56.5], [24.0, 52.0], [25.0, 50.0], [29.0, 48.0],
+  [30.0, 49.0], [29.0, 50.5], [27.0, 56.0], [25.3, 60.5],
+  [24.8, 67.0], [23.0, 68.5], [21.0, 70.0], [19.0, 72.8], [15.0, 73.8], [8.0, 77.0],
+  [6.0, 80.0], [9.0, 81.0],
+  [15.0, 80.0], [21.5, 87.0], [22.0, 90.0],
+  [16.0, 94.0], [10.0, 98.0], [5.0, 96.0], [0.0, 98.0],
+  [-5.0, 104.0], [-6.0, 106.0], [-8.5, 115.0], [-10.0, 124.0],
+  [-5.0, 140.0], [0.0, 130.0], [5.0, 125.0], [10.0, 119.0], [14.0, 121.0], [18.0, 122.0],
+  [22.0, 120.0], [25.0, 122.0],
+  [30.0, 122.0], [33.0, 130.0], [35.0, 140.0], [40.0, 142.0], [43.0, 145.0], [45.0, 142.0],
+  [51.0, 156.0], [60.0, 165.0], [64.0, 185.0],
+  [65.5, 191.0], [66.0, 191.2], [67.0, 191.5],
+  [69.0, 175.0], [70.0, 165.0], [72.0, 160.0], [73.0, 140.0], [72.0, 130.0],
+  [65.0, 130.0], [55.0, 120.0], [50.0, 118.0],
+  [45.0, 115.0], [40.0, 105.0], [40.0, 95.0], [35.0, 80.0], [35.0, 75.0],
+  [37.0, 74.0], [37.0, 66.0], [36.0, 61.0], [37.5, 55.0], [39.0, 48.0],
+  [40.0, 44.0], [42.0, 42.0], [41.5, 35.0], [41.5, 28.0],
+  [42.0, 28.0], [43.5, 28.5], [45.0, 29.5],
+  [46.5, 30.0],
+  [48.4, 27.5],
+  [54.0, 25.0],
+  [56.0, 28.0], [59.0, 28.0],
+  [60.5, 28.0], [64.0, 30.0], [66.0, 29.5], [69.0, 29.0]
+], { stroke: false, fillColor: '#ff0000', fillOpacity: 0.18, pane: 'lands', interactive: false });
+
+let ssiLayer=null;
+const SSI_BASE ={color:'#6BAED6',weight:.5,opacity:.7,fillColor:'#9ECAE1',fillOpacity:.32};
+const SSI_ASSOC={color:'#9E9AC8',weight:.5,opacity:.7,fillColor:'#BCBDDC',fillOpacity:.32};
+const SSI_FOCUS_MEM={color:'#c4b5fd',weight:1.5,opacity:.95,fillColor:'#a78bfa',fillOpacity:.45};
+const SSI_FOCUS_ASSOC={color:'#c4b5fd',weight:1.5,opacity:.95,fillColor:'#bfa6ff',fillOpacity:.38};
+(function loadSSI(){
+ fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson')
+  .then(r=>r.json())
+  .then(data=>{
+    ssiLayer=L.geoJSON(data,{
+      style:feat=>{
+        const name=feat.properties.ADMIN||feat.properties.name;
+        if(SSI_MEMBERS.has(name))return {...SSI_BASE};
+        if(SSI_ASSOCIATES.has(name))return {...SSI_ASSOC};
+        return {weight:0,fillOpacity:0};
+      },
+      filter:feat=>{const n=feat.properties.ADMIN||feat.properties.name;
+        return SSI_MEMBERS.has(n)||SSI_ASSOCIATES.has(n);},
+      onEachFeature:(feat,layer)=>{
+        const n=feat.properties.ADMIN||feat.properties.name;
+        const status=SSI_MEMBERS.has(n)?'3SI Full Member':'3SI Associate Partner';
+        layer.bindTooltip(`<b>${n}</b><br>${status}`,{sticky:true,className:'tt'});
+      },
+      pane:'lands'
+    }).addTo(map);
+        try{ssiLayer.bringToBack();}catch(e){}
+  })
+  .catch(()=>{});
+})();
+function setSSIFocus(on){
+ if(!ssiLayer)return;
+ ssiLayer.eachLayer(layer=>{
+   const feat=layer.feature;
+   const name=feat.properties.ADMIN||feat.properties.name;
+   if(SSI_MEMBERS.has(name))layer.setStyle(on?SSI_FOCUS_MEM:SSI_BASE);
+   else if(SSI_ASSOCIATES.has(name))layer.setStyle(on?SSI_FOCUS_ASSOC:SSI_ASSOC);
+ });
+}
+
+const byId={};
+CORRIDORS.forEach(c=>{
+  c.halo=L.polyline(c.pts,{color:c.c,weight:c.w*.55+3,opacity:0,pane:'halos',interactive:false}).addTo(map);
+  c.main=L.polyline(c.pts,{color:c.c,weight:c.w*.55,opacity:.85,dashArray:c.dash||null,pane:'cors',className:'glow-pipeline'}).addTo(map);
+  c.main.on('click',e=>{L.DomEvent.stopPropagation(e);flashCorridor(c);});
+  c.main.bindTooltip(c.nm,{className:'tt',sticky:true});
+  c.cum=[0];let t=0;
+  for(let i=1;i<c.pts.length;i++){const a=c.pts[i-1],b=c.pts[i];
+    const dx=(b[1]-a[1])*Math.cos((a[0]+b[0])/2*Math.PI/180),dy=b[0]-a[0];
+    t+=Math.sqrt(dx*dx+dy*dy);c.cum.push(t);}
+  c.len=t;byId[c.id]=c;
+});
+function pointAt(c,d){const p=c.pts,cu=c.cum;let i=1;while(i<cu.length&&cu[i]<d)i++;
+ if(i>=cu.length)return p[p.length-1];
+ const f=(d-cu[i-1])/(cu[i]-cu[i-1]||1),a=p[i-1],b=p[i];
+ return [a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f];}
+
+CORRIDORS.forEach(c=>{
+ c.main.on('mouseover',()=>c.main.setStyle({weight:weightFor(c)+.8,opacity:1}));
+ c.main.on('mouseout',()=>applyStyles());
+});
+
+const nodeGroup=L.layerGroup().addTo(map);
+NODES.forEach(nd=>{
+  const cls=nd.cl==='keystone'?'nd keystone':nd.cl==='valve'?'nd valve':nd.cl==='contested'?'nd contested':nd.cl==='vc'?'nd vc':'nd';
+  const m=L.marker(nd.ll,{icon:L.divIcon({className:'',html:`<div class="${cls}"></div>`,iconSize:[10,10],iconAnchor:[5,5]}),pane:'nodes'});
+  m.bindTooltip(`<b>${nd.n}</b><br>${nd.st}`,{className:'tt',direction:'top',offset:[0,-6]});
+  m.on('click',e=>{L.DomEvent.stopPropagation(e);openDossier(nd);});
+  nd.marker=m;nd._shown=true;nodeGroup.addLayer(m);
+});
+
+const state={step:-1,emph:new Set(),dim:false,vis:{},auto:false,timers:[],rings:[]};
+CORRIDORS.forEach(c=>state.vis[c.id]=!(c.g==='ctr'));
+function zoomFactor(){
+  const z=map.getZoom();
+  if(z<=3)return .45;if(z===4)return .55;if(z===5)return .5;if(z===6)return .42;if(z===7)return .34;if(z===8)return .27;if(z===9)return .21;return .16;
+}
+function weightFor(c,emph){return Math.max(.4,c.w*zoomFactor()*(emph?1.35:1));}
+function haloFor(c,emph){return weightFor(c,emph)+3.5*zoomFactor();}
+
+function applyNodeVisibility(){
+  const active=state.emph.size>0;
+  NODES.forEach(nd=>{
+    const show=!active||(nd.links||[]).some(l=>state.emph.has(l));
+    if(show===nd._shown)return;
+    nd._shown=show;
+    if(show)nodeGroup.addLayer(nd.marker);
+    else nodeGroup.removeLayer(nd.marker);
+  });
+}
+
+function applyStyles(){
+  CORRIDORS.forEach(c=>{
+    const vis=state.vis[c.id],emph=state.emph.has(c.id);
+    let op;
+    if(!vis)op=0;
+    else if(emph)op=.95;
+    else if(state.emph.size)op=.12;
+    else op=.8;
+    if(state.dim&&!emph&&vis)op*=.22;
+    c.main.setStyle({opacity:op,weight:weightFor(c,emph)});
+    c.halo.setStyle({opacity:op?op*.18:0,weight:haloFor(c,emph)});
+  });
+  applyNodeVisibility();
+}
+map.on('zoomend',()=>applyStyles());
+map.on('zoom',()=>applyStyles());
+
+let _panTimer = null;
+map.on('movestart', () => {
+  clearTimeout(_panTimer);
+  map.getContainer().classList.add('is-panning');
+});
+map.on('moveend', () => {
+  clearTimeout(_panTimer);
+  _panTimer = setTimeout(() => {
+    map.getContainer().classList.remove('is-panning');
+  }, 150);
+});
+
+const reduced=()=>SETTINGS.anim==='reduced';
+function cancelAnims(){CORRIDORS.forEach(c=>{if(c._raf)cancelAnimationFrame(c._raf);c._raf=null;});
+ state.timers.forEach(t=>clearTimeout(t));state.timers=[];}
+function drawCorridor(c,dur=1500){
+  if(c._raf)cancelAnimationFrame(c._raf);
+  state.vis[c.id]=true;syncCheck(c.id,true);
+  if(reduced()){c.main.setLatLngs(c.pts);c.halo.setLatLngs(c.pts);applyStyles();return Promise.resolve();}
+  const pts=c.pts;c.main.setLatLngs([]);c.halo.setLatLngs([]);applyStyles();
+  const head=L.circleMarker(pts[0],{radius:2.4,color:'#fff',weight:1.2,fillColor:c.c,fillOpacity:1,pane:'nodes'}).addTo(map);
+  const t0=performance.now();
+  return new Promise(res=>{
+    const step=now=>{
+      let t=Math.min(1,(now-t0)/dur);const e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+      const n=Math.max(1,Math.round(e*(pts.length-1)));
+      const sub=pts.slice(0,n+1);
+      if(n<pts.length-1){const f=e*(pts.length-1)-n,a=pts[n],b=pts[n+1];
+        sub.push([a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f]);}
+      c.main.setLatLngs(sub);c.halo.setLatLngs(sub);head.setLatLng(sub[sub.length-1]);
+      if(t<1)c._raf=requestAnimationFrame(step);
+      else{c._raf=null;c.main.setLatLngs(pts);c.halo.setLatLngs(pts);head.remove();res();}
+    };c._raf=requestAnimationFrame(step);});
+}
+function drawSeq(ids){ids.forEach((id,i)=>state.timers.push(setTimeout(()=>drawCorridor(byId[id]),i*170)));}
+function fullRestore(){CORRIDORS.forEach(c=>{if(c._raf){cancelAnimationFrame(c._raf);c._raf=null;}
+ c.main.setLatLngs(c.pts);c.halo.setLatLngs(c.pts);});}
+
+const pulses=[];
+function setFlows(ids){
+  pulses.forEach(p=>p.m.remove());pulses.length=0;
+  if(reduced())return;
+  ids.forEach(id=>{const c=byId[id];if(!c||c.g==='ctr')return;
+    const n=Math.min(3,1+Math.floor(c.len/7));
+    for(let i=0;i<n;i++){
+      const m=L.circleMarker([0,0],{radius:1.8,color:c.c,weight:0,fillColor:c.c,fillOpacity:.95,pane:'nodes'}).addTo(map);
+      pulses.push({c,pos:Math.random()*c.len,sp:c.len/(6+Math.random()*3),m});
+    }});
+}
+let lastT=performance.now();
+(function tick(now){const dt=Math.min(.1,(now-lastT)/1000);lastT=now;
+  pulses.forEach(p=>{p.pos+=p.sp*dt;if(p.pos>p.c.len)p.pos-=p.c.len;p.m.setLatLng(pointAt(p.c,p.pos));});
+  requestAnimationFrame(tick);})(lastT);
+
+function showRings(){
+  clearRings();
+  if(reduced())return;
+  SEAS.filter(s=>s[2]).forEach((s,i)=>{
+    const m=L.marker(s[1],{icon:L.divIcon({className:'',html:`<div class="sring ${i%2?'v':''}"></div>`,iconSize:[40,40],iconAnchor:[20,20]}),interactive:false,pane:'nodes'}).addTo(map);
+    state.rings.push(m);});
+  [['Thessaloniki',[40.6401,22.9444]],['Constanța',[44.1792,28.6498]]].forEach(x=>{
+    const m=L.marker(x[1],{icon:L.divIcon({className:'',html:'<div class="sring v"></div>',iconSize:[40,40],iconAnchor:[20,20]}),interactive:false,pane:'nodes'}).addTo(map);
+    state.rings.push(m);});
+}
+function clearRings(){state.rings.forEach(r=>r.remove());state.rings=[];}
+function flashCorridor(c){c.main.setStyle({opacity:1,weight:weightFor(c)+1});
+  setTimeout(()=>applyStyles(),700);}
+
+const narrEl=document.getElementById('narr');
+const isMobile=()=>window.matchMedia('(max-width:960px)').matches;
+const dotsEl=document.getElementById('dots');
+STEPS.forEach((s,i)=>{const d=document.createElement('i');d.onclick=()=>{stopAuto();gotoStep(i);};dotsEl.appendChild(d);});
+
+let endScrollTimer = null;
+function gotoStep(i){
+  const prevStep = state.step; // Capture the previous step before updating
+  cancelAnims();fullRestore();clearRings();closeDossier();
+  state.step=i;
+  
+  if (endScrollTimer) {
+    clearTimeout(endScrollTimer);
+    endScrollTimer = null;
+  }
+
+  if (i >= STEPS.length - 1) {
+    document.body.classList.add('final-slide');
+    
+    // If we are already on the final slide and clicking Next again, scroll quickly.
+    // If we just arrived at the final slide from a previous step, give time to read.
+    const isAlreadyOnFinalSlide = (prevStep === i);
+    const scrollDelay = isAlreadyOnFinalSlide ? 800 : STEP_DUR[STEPS.length - 1] * SPEED_MULT[SETTINGS.speed];
+    
+    endScrollTimer = setTimeout(() => {
+      document.getElementById('ending').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, scrollDelay);
+  } else {
+    document.body.classList.remove('final-slide');
+  }
+
+  const S=STEPS[i];
+  if(S.rimland) rimlandPoly.addTo(map); else rimlandPoly.remove();
+  state.emph=new Set(S.draw||[]);(S.emphX||[]).forEach(x=>state.emph.add(x));
+  state.dim=!!S.dim;
+    if(S.showCtr)CORRIDORS.filter(c=>c.g==='ctr').forEach(c=>{state.vis[c.id]=true;syncCheck(c.id,true);});
+  applyStyles();
+  // Rebuild legend so it only lists what this slide shows on the map
+  const act=[...state.emph];
+  if(!act.length)CORRIDORS.forEach(c=>{if(state.vis[c.id])act.push(c.id);});
+  if(S.showCtr)CORRIDORS.filter(c=>c.g==='ctr').forEach(c=>{if(!act.includes(c.id))act.push(c.id);});
+  buildLegend(act,{ssi:!!S.ssiFocus});
+  setSSIFocus(!!S.ssiFocus);
+  map.flyToBounds(L.latLngBounds(S.focus).pad(.08),{duration:reduced()?.2:1.15,maxZoom:6});
+  if(S.draw&&S.draw.length)drawSeq(S.draw);
+  setFlows([...state.emph].filter(id=>byId[id]&&byId[id].g!=='ctr'));
+  if(S.rings)state.timers.push(setTimeout(showRings,600));
+  document.getElementById('stepKick').textContent=S.k;
+  document.getElementById('stepTitle').textContent=S.t;
+  document.getElementById('stepBody').innerHTML=S.b;
+  document.getElementById('badges').innerHTML=S.badges.map(b=>`<span class="badge ${b[1]}">${b[0]}</span>`).join('');
+  document.getElementById('timeline').style.display='none';
+    [...dotsEl.children].forEach((d,j)=>{d.className=j<i?'done':j===i?'cur':'';});
+  if(isMobile())narrEl.classList.remove('collapsed');
+}
+function stopAuto(){state.auto=false;if(state._at)clearTimeout(state._at);}
+function runSequence(){
+  stopAuto();state.auto=true;
+  gotoStep(0);advanceAuto();
+}
+function advanceAuto(){if(!state.auto)return;
+ if(state.step>=STEPS.length-1){
+   stopAuto();
+   return;
+ }
+ state._at=setTimeout(()=>{gotoStep(state.step+1);advanceAuto();},STEP_DUR[state.step]*SPEED_MULT[SETTINGS.speed]);}
+
+const layEl=document.getElementById('layers');
+function buildLegend(filterIds,opts){
+ const o=opts||{};
+ const showIds=filterIds?new Set(filterIds):null; // null = show everything
+ let html='';
+ Object.keys(GROUPS).forEach(g=>{
+   const rows=CORRIDORS.filter(c=>c.g===g&&(!showIds||showIds.has(c.id)));
+   if(!rows.length)return; // skip empty groups
+   html+=`<h3>${GROUPS[g]}</h3>`;
+   rows.forEach(c=>{
+     const [lbl,cls]=ST_LBL[c.s];
+     html+=`<label class="lrow" style="--c:${c.c}">
+       <span class="sw ${c.dash?'dash':''}"></span><span>${c.nm}</span>
+       <span class="st ${cls}">${lbl}</span>
+       <input type="checkbox" data-id="${c.id}" ${state.vis[c.id]?'checked':''}></label>`;});
+ });
+ if(o.ssi){
+   html+='<h3>3SI COUNTRY POLYGONS</h3>'+
+   `<label class="lrow" style="--c:#9ECAE1"><span class="sw poly"></span><span>3SI Full Members (14)</span><input type="checkbox" id="ckSSIMembers" checked></label>`+
+   `<label class="lrow" style="--c:#BCBDDC"><span class="sw poly assoc"></span><span>3SI Associates (4)</span><input type="checkbox" id="ckSSIAssociates" checked></label>`+
+   `<div class="lnote">Members: Estonia · Latvia · Lithuania · Poland · Czechia · Slovakia · Austria · Hungary · Slovenia · Croatia · Romania · Bulgaria · Greece. Associates: Ukraine · Moldova · Albania · Montenegro.</div>`;
+ }
+ html+='<h3>MAP MARKERS</h3>'+
+ `<label class="lrow" style="--c:#fff"><span class="sw"></span><span>Corridor nodes (dossiers)</span><input type="checkbox" id="ckNodes" checked></label>`;
+ layEl.innerHTML=html;
+ layEl.querySelectorAll('input[data-id]').forEach(inp=>inp.onchange=()=>{
+   state.vis[inp.dataset.id]=inp.checked;applyStyles();
+ });
+ const ckN=document.getElementById('ckNodes');
+ if(ckN)ckN.onchange=e=>{e.target.checked?map.addLayer(nodeGroup):map.removeLayer(nodeGroup);};
+}
+buildLegend(null,{ssi:true});
+function syncCheck(id,on){const el=layEl.querySelector(`input[data-id="${id}"]`);if(el)el.checked=on;}
+
+const dEl=document.getElementById('dossier');
+function openDossier(nd){
+  document.getElementById('dName').textContent=nd.n;
+  const bc=nd.st.includes('CONTEST')||nd.st==='CHOKEPOINT'?'b-red':
+           nd.st.includes('PROPOSED')||nd.st==='KEYSTONE'||nd.st==='PLANNED'||nd.st==='THEORETICAL'||nd.st.includes('CHARTERED')?'b-amber':
+           nd.st.includes('COUPLING')?'b-violet':'b-green';
+  document.getElementById('dStat').innerHTML=`<span class="badge ${bc}">${nd.st}</span>`;
+  document.getElementById('dRole').textContent=nd.role;
+  document.getElementById('dLinks').innerHTML=(nd.links||[]).filter(l=>byId[l]).map(l=>
+    `<span class="lk" data-l="${l}">${byId[l].nm}</span>`).join('');
+  dEl.querySelectorAll('.lk').forEach(x=>x.onclick=()=>flashCorridor(byId[x.dataset.l]));
+  dEl.classList.add('show');
+  state.emph=new Set(nd.links||[]);state.dim=false;applyStyles();
+}
+function closeDossier(){dEl.classList.remove('show');
+ if(state.step>=0){const S=STEPS[state.step];
+   state.emph=new Set(S.draw||[]);(S.emphX||[]).forEach(x=>state.emph.add(x));applyStyles();}}
+document.getElementById('dClose').onclick=closeDossier();
+map.on('click',closeDossier);
+
+// === MODE SWITCHING ===
+let mapModeActive = false;
+function enterMapMode(){
+  if(mapModeActive) return;
+  mapModeActive = true;
+  document.body.classList.remove('story-mode');
+  document.body.classList.add('map-mode'); // ADD THIS
+  
+  // Ensure document.body.style.overflow = 'hidden'; is REMOVED
+  
+  document.getElementById('mapSection').scrollIntoView({behavior:'smooth',block:'start'});
+  setTimeout(()=>{
+    map.invalidateSize();
+    runSequence();
+  }, 700);
+}
+
+document.getElementById('btnRun').onclick=enterMapMode;
+document.getElementById('enterMap').onclick=enterMapMode;
+document.getElementById('btnNext').onclick=()=>{
+  stopAuto();
+  const next=Math.min(STEPS.length-1,(state.step<0?0:state.step+1));
+  gotoStep(next);
+};
+document.getElementById('btnPrev').onclick=()=>{
+  if (state.step <= 0) {
+    stopAuto();
+    mapModeActive = false;
+    document.body.classList.remove('map-mode');
+    document.body.classList.remove('final-slide');
+    document.body.classList.add('story-mode');
+    const lastStory = document.querySelector('.story-section[data-story="8"]');
+    if (lastStory) lastStory.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else {
+    stopAuto();
+    gotoStep(state.step - 1);
+  }
+};
+document.getElementById('btnReturnStart').addEventListener('click', (e) => {
+  e.preventDefault();
+  stopAuto();
+  if (endScrollTimer) { clearTimeout(endScrollTimer); endScrollTimer = null; }
+  mapModeActive = false;
+  document.body.classList.remove('map-mode');
+  document.body.classList.remove('final-slide');
+  document.body.classList.remove('ending-mode');
+  document.body.classList.add('story-mode');
+  document.getElementById('storyContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+document.getElementById('grab').onclick=()=>narrEl.classList.toggle('collapsed');
+document.getElementById('btnReset').onclick=()=>{
+ stopAuto();cancelAnims();clearRings();closeDossier();
+ if (endScrollTimer) { clearTimeout(endScrollTimer); endScrollTimer = null; }
+ CORRIDORS.forEach(c=>{state.vis[c.id]=!(c.g==='ctr');syncCheck(c.id,state.vis[c.id]);});
+  state.emph.clear();state.dim=false;state.step=-1;
+ setSSIFocus(false);applyStyles();setFlows([]);fullRestore();
+ buildLegend(null,{ssi:true});
+ map.flyToBounds(ALL,{duration:1.2});
+ document.getElementById('stepKick').textContent='STANDBY';
+ document.getElementById('stepTitle').textContent='Briefing complete — enter the map';
+ document.getElementById('stepBody').innerHTML='The map now shows the argument geographically: <em>military power remains the backstop, while network architecture organizes the Rimland.</em> Click Next or ▶ Run to watch the layers build.';
+ document.getElementById('badges').innerHTML='';
+ document.getElementById('timeline').style.display='none';
+
+ [...dotsEl.children].forEach(d=>d.className='');
+};
+const drawers={layers:document.getElementById('layers'),settings:document.getElementById('settings')};
+function toggleDrawer(name){
+ const el=drawers[name],other=drawers[name==='layers'?'settings':'layers'];
+ other.classList.add('hiddenR');other.classList.remove('showM');
+ if(el.classList.contains('hiddenR')){el.classList.remove('hiddenR');el.classList.add('showM');}
+ else{el.classList.add('hiddenR');el.classList.remove('showM');}
+}
+document.getElementById('btnLayers').onclick = () => toggleDrawer('layers');
+document.getElementById('btnSettings').onclick = () => toggleDrawer('settings');
+if(!isMobile()){drawers.layers.classList.remove('hiddenR');}
+
+window.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'){stopAuto();gotoStep(Math.min(STEPS.length-1,(state.step<0?0:state.step+1)));}
+  if(e.key==='ArrowLeft'){
+    if (state.step <= 0) {
+      stopAuto();
+      mapModeActive = false;
+      document.body.classList.remove('map-mode');
+      document.body.classList.remove('final-slide');
+      document.body.classList.add('story-mode');
+      const lastStory = document.querySelector('.story-section[data-story="8"]');
+      if (lastStory) lastStory.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      stopAuto();
+      gotoStep(state.step - 1);
+    }
+  }
+  if(e.key===' '){e.preventDefault();state.auto?stopAuto():enterMapMode();}
+  if(e.key==='Escape')closeDossier();
+});
+applyStyles();
+
+// Story card visibility observer + auto-trigger for final chapter
+const TOTAL_STORY = 9;
+let currentStoryIdx = -1;
+
+const storyObserver = new IntersectionObserver((entries)=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting){
+      const card = entry.target.querySelector('.story-card');
+      card.classList.add('visible');
+      const idx = +entry.target.dataset.story;
+      currentStoryIdx = idx;
+      // Update all progress bars
+      document.querySelectorAll('.story-progress').forEach(prog=>{
+        prog.innerHTML = '';
+        for(let i=0;i<TOTAL_STORY;i++){
+          const dot = document.createElement('i');
+          if(i < idx) dot.className = 'done';
+          else if(i === idx) dot.className = 'cur';
+          prog.appendChild(dot);
+        }
+      });
+      // AUTO-TRIGGER: when the final story card (idx 8) becomes visible,
+      // automatically transition to map mode after a brief reading pause
+      if(idx === TOTAL_STORY - 1 && !mapModeActive){
+        setTimeout(()=>{
+          if(currentStoryIdx === TOTAL_STORY - 1 && !mapModeActive){
+            enterMapMode();
+          }
+        }, 2500);
+      }
+    }
+  });
+},{threshold:0.55, rootMargin:'-5% 0px -5% 0px'});
+
+document.querySelectorAll('.story-section').forEach(section=>{
+  storyObserver.observe(section);
+});
+
+// Ending slides: hide all map UI panels and stop the sequence
+const endingObserver = new IntersectionObserver((entries)=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting){
+      document.body.classList.add('ending-mode');
+      stopAuto();
+      cancelAnims();
+      clearRings();
+      closeDossier();
+      if (endScrollTimer) {
+        clearTimeout(endScrollTimer);
+        endScrollTimer = null;
+      }
+    } else {
+      document.body.classList.remove('ending-mode');
+    }
+  });
+},{threshold:0.05});
+endingObserver.observe(document.getElementById('ending'));
+
+// Reveal the outro underline only when the outro slide comes into view
+const outroObserver = new IntersectionObserver((entries)=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting) entry.target.classList.add('visible');
+  });
+},{threshold:0.5});
+outroObserver.observe(document.getElementById('endState'));
+
+// === MOVE .foot FOR PC/MODE ===
+// This physically moves the navigation buttons out of the narrative panel on PC screens 
+// so they can be fixed to the top right. On mobile, they stay inside #narr to preserve layout.
+const footEl = document.querySelector('.foot');
+function adjustFootPosition() {
+  if (window.matchMedia('(max-width: 960px)').matches) {
+    if (footEl.parentElement !== narrEl) {
+      narrEl.appendChild(footEl);
+    }
+  } else {
+    if (footEl.parentElement !== document.body) {
+      document.body.appendChild(footEl);
+    }
+  }
+}
+window.addEventListener('resize', adjustFootPosition);
+adjustFootPosition();
+</script>
+</body>
+</html>
