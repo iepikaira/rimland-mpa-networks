@@ -695,7 +695,7 @@ body.map-mode.final-slide #ending {
         <h1 style="font: 900 clamp(26px, 4.6vw, 40px) / 1.06 var(--sans); text-transform: uppercase; margin-bottom: 14px;">One <em style="color: var(--amber);">Thought</em> to remember...</h1>
         <span class="kick"></span><br/>
         <p>The strategic contest is not only about <em style="color: var(--amber);">who has the military</em> to control a territory.<p><br/> 
-        <p>It is about <em style="color: var(--amber);">who designs stable networks</em> through which territories function.</p>
+        <p>It is about <em style="color: var(--amber);">who designs stable networks</em> through which the territory functions.</p>
       </div>
       <div class="end-close">
         <a class="top-btn" href="#storyContainer" id="btnReturnStart">↑ Return to start</a>
@@ -890,10 +890,9 @@ map.createPane('lands'); map.getPane('lands').style.zIndex=340;
 map.createPane('halos'); map.getPane('halos').style.zIndex=380;
 map.createPane('cors');  map.getPane('cors').style.zIndex=400;
 map.createPane('nodes'); map.getPane('nodes').style.zIndex=440;
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
 }).addTo(map);
-L.control.zoom({position:'bottomright'}).addTo(map);
 map.fitBounds(ALL);
 
 const rimlandPoly = L.polygon([
